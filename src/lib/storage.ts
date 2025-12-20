@@ -7,13 +7,22 @@ export interface UploadProgress {
   error?: string
 }
 
+// Check if Firebase Storage is configured
+function checkStorage() {
+  if (!storage) {
+    throw new Error('Firebase Storage is not configured. Please add environment variables.')
+  }
+  return storage
+}
+
 // Upload a file to Firebase Storage
 export async function uploadFile(
   file: File,
   path: string,
   onProgress?: (progress: number) => void
 ): Promise<string> {
-  const storageRef = ref(storage, path)
+  const storageInstance = checkStorage()
+  const storageRef = ref(storageInstance, path)
   const uploadTask = uploadBytesResumable(storageRef, file)
 
   return new Promise((resolve, reject) => {
@@ -69,7 +78,8 @@ export async function uploadBlogImage(
 
 // Delete a file from storage
 export async function deleteFile(path: string): Promise<void> {
-  const storageRef = ref(storage, path)
+  const storageInstance = checkStorage()
+  const storageRef = ref(storageInstance, path)
   await deleteObject(storageRef)
 }
 
@@ -91,8 +101,3 @@ export function validateFileType(file: File, allowedTypes: string[]): boolean {
 export function validateFileSize(file: File, maxSizeMB: number): boolean {
   return file.size <= maxSizeMB * 1024 * 1024
 }
-
-
-
-
-

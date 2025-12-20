@@ -107,9 +107,18 @@ export function getCurrentWeek(): string {
   return `Week ${weekNumber}, ${now.getFullYear()}`
 }
 
+// Check if Firebase is configured
+function checkFirebase() {
+  if (!db) {
+    throw new Error('Firebase is not configured. Please add environment variables.')
+  }
+  return db
+}
+
 // Submissions
 export async function getSubmissions(statusFilter?: string) {
-  const submissionsRef = collection(db, COLLECTIONS.SUBMISSIONS)
+  const database = checkFirebase()
+  const submissionsRef = collection(database, COLLECTIONS.SUBMISSIONS)
   let q = query(submissionsRef, orderBy('createdAt', 'desc'))
   
   if (statusFilter && statusFilter !== 'all') {
@@ -121,7 +130,8 @@ export async function getSubmissions(statusFilter?: string) {
 }
 
 export async function addSubmission(data: Omit<Submission, 'id' | 'createdAt' | 'updatedAt'>) {
-  const submissionsRef = collection(db, COLLECTIONS.SUBMISSIONS)
+  const database = checkFirebase()
+  const submissionsRef = collection(database, COLLECTIONS.SUBMISSIONS)
   return addDoc(submissionsRef, {
     ...data,
     createdAt: serverTimestamp(),
@@ -130,7 +140,8 @@ export async function addSubmission(data: Omit<Submission, 'id' | 'createdAt' | 
 }
 
 export async function updateSubmission(id: string, data: Partial<Submission>) {
-  const docRef = doc(db, COLLECTIONS.SUBMISSIONS, id)
+  const database = checkFirebase()
+  const docRef = doc(database, COLLECTIONS.SUBMISSIONS, id)
   return updateDoc(docRef, {
     ...data,
     updatedAt: serverTimestamp(),
@@ -139,7 +150,8 @@ export async function updateSubmission(id: string, data: Partial<Submission>) {
 
 // Sponsors
 export async function getSponsors(tierFilter?: string) {
-  const sponsorsRef = collection(db, COLLECTIONS.SPONSORS)
+  const database = checkFirebase()
+  const sponsorsRef = collection(database, COLLECTIONS.SPONSORS)
   let q = query(sponsorsRef, orderBy('tier'), orderBy('name'))
   
   if (tierFilter && tierFilter !== 'all') {
@@ -151,14 +163,16 @@ export async function getSponsors(tierFilter?: string) {
 }
 
 export async function getActiveSponsors() {
-  const sponsorsRef = collection(db, COLLECTIONS.SPONSORS)
+  const database = checkFirebase()
+  const sponsorsRef = collection(database, COLLECTIONS.SPONSORS)
   const q = query(sponsorsRef, where('status', '==', 'active'), orderBy('tier'))
   const snapshot = await getDocs(q)
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sponsor))
 }
 
 export async function addSponsor(data: Omit<Sponsor, 'id' | 'createdAt'>) {
-  const sponsorsRef = collection(db, COLLECTIONS.SPONSORS)
+  const database = checkFirebase()
+  const sponsorsRef = collection(database, COLLECTIONS.SPONSORS)
   return addDoc(sponsorsRef, {
     ...data,
     createdAt: serverTimestamp(),
@@ -166,18 +180,21 @@ export async function addSponsor(data: Omit<Sponsor, 'id' | 'createdAt'>) {
 }
 
 export async function updateSponsor(id: string, data: Partial<Sponsor>) {
-  const docRef = doc(db, COLLECTIONS.SPONSORS, id)
+  const database = checkFirebase()
+  const docRef = doc(database, COLLECTIONS.SPONSORS, id)
   return updateDoc(docRef, data)
 }
 
 export async function deleteSponsor(id: string) {
-  const docRef = doc(db, COLLECTIONS.SPONSORS, id)
+  const database = checkFirebase()
+  const docRef = doc(database, COLLECTIONS.SPONSORS, id)
   return deleteDoc(docRef)
 }
 
 // Volunteers
 export async function getVolunteers(statusFilter?: string) {
-  const volunteersRef = collection(db, COLLECTIONS.VOLUNTEERS)
+  const database = checkFirebase()
+  const volunteersRef = collection(database, COLLECTIONS.VOLUNTEERS)
   let q = query(volunteersRef, orderBy('createdAt', 'desc'))
   
   if (statusFilter && statusFilter !== 'all') {
@@ -189,7 +206,8 @@ export async function getVolunteers(statusFilter?: string) {
 }
 
 export async function addVolunteer(data: Omit<Volunteer, 'id' | 'createdAt' | 'updatedAt' | 'status'>) {
-  const volunteersRef = collection(db, COLLECTIONS.VOLUNTEERS)
+  const database = checkFirebase()
+  const volunteersRef = collection(database, COLLECTIONS.VOLUNTEERS)
   return addDoc(volunteersRef, {
     ...data,
     status: 'new',
@@ -199,7 +217,8 @@ export async function addVolunteer(data: Omit<Volunteer, 'id' | 'createdAt' | 'u
 }
 
 export async function updateVolunteer(id: string, data: Partial<Volunteer>) {
-  const docRef = doc(db, COLLECTIONS.VOLUNTEERS, id)
+  const database = checkFirebase()
+  const docRef = doc(database, COLLECTIONS.VOLUNTEERS, id)
   return updateDoc(docRef, {
     ...data,
     updatedAt: serverTimestamp(),
@@ -208,7 +227,8 @@ export async function updateVolunteer(id: string, data: Partial<Volunteer>) {
 
 // Blog Posts
 export async function getBlogPosts(type?: 'contest' | 'personal', publishedOnly = false) {
-  const postsRef = collection(db, COLLECTIONS.BLOG_POSTS)
+  const database = checkFirebase()
+  const postsRef = collection(database, COLLECTIONS.BLOG_POSTS)
   let q = query(postsRef, orderBy('createdAt', 'desc'))
   
   if (type) {
@@ -224,7 +244,8 @@ export async function getBlogPosts(type?: 'contest' | 'personal', publishedOnly 
 }
 
 export async function getBlogPost(id: string) {
-  const docRef = doc(db, COLLECTIONS.BLOG_POSTS, id)
+  const database = checkFirebase()
+  const docRef = doc(database, COLLECTIONS.BLOG_POSTS, id)
   const snapshot = await getDoc(docRef)
   if (snapshot.exists()) {
     return { id: snapshot.id, ...snapshot.data() } as BlogPost
@@ -233,7 +254,8 @@ export async function getBlogPost(id: string) {
 }
 
 export async function addBlogPost(data: Omit<BlogPost, 'id' | 'createdAt' | 'updatedAt' | 'views'>) {
-  const postsRef = collection(db, COLLECTIONS.BLOG_POSTS)
+  const database = checkFirebase()
+  const postsRef = collection(database, COLLECTIONS.BLOG_POSTS)
   return addDoc(postsRef, {
     ...data,
     views: 0,
@@ -243,7 +265,8 @@ export async function addBlogPost(data: Omit<BlogPost, 'id' | 'createdAt' | 'upd
 }
 
 export async function updateBlogPost(id: string, data: Partial<BlogPost>) {
-  const docRef = doc(db, COLLECTIONS.BLOG_POSTS, id)
+  const database = checkFirebase()
+  const docRef = doc(database, COLLECTIONS.BLOG_POSTS, id)
   return updateDoc(docRef, {
     ...data,
     updatedAt: serverTimestamp(),
@@ -251,21 +274,18 @@ export async function updateBlogPost(id: string, data: Partial<BlogPost>) {
 }
 
 export async function deleteBlogPost(id: string) {
-  const docRef = doc(db, COLLECTIONS.BLOG_POSTS, id)
+  const database = checkFirebase()
+  const docRef = doc(database, COLLECTIONS.BLOG_POSTS, id)
   return deleteDoc(docRef)
 }
 
 // Increment blog post views
 export async function incrementBlogViews(id: string) {
-  const docRef = doc(db, COLLECTIONS.BLOG_POSTS, id)
+  const database = checkFirebase()
+  const docRef = doc(database, COLLECTIONS.BLOG_POSTS, id)
   const snapshot = await getDoc(docRef)
   if (snapshot.exists()) {
     const currentViews = snapshot.data().views || 0
     return updateDoc(docRef, { views: currentViews + 1 })
   }
 }
-
-
-
-
-

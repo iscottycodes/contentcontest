@@ -1,10 +1,9 @@
-import { initializeApp, getApps } from 'firebase/app'
-import { getFirestore } from 'firebase/firestore'
-import { getAuth } from 'firebase/auth'
-import { getStorage } from 'firebase/storage'
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
+import { getFirestore, Firestore } from 'firebase/firestore'
+import { getAuth, Auth } from 'firebase/auth'
+import { getStorage, FirebaseStorage } from 'firebase/storage'
 
 // Your Firebase configuration
-// Replace these with your actual Firebase project credentials
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -14,17 +13,21 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-// Initialize Firebase (prevent multiple initializations)
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
+// Check if Firebase config is available
+const isFirebaseConfigured = firebaseConfig.apiKey && firebaseConfig.projectId
 
-// Initialize services
-export const db = getFirestore(app)
-export const auth = getAuth(app)
-export const storage = getStorage(app)
+// Initialize Firebase only if configured
+let app: FirebaseApp | null = null
+let db: Firestore | null = null
+let auth: Auth | null = null
+let storage: FirebaseStorage | null = null
 
+if (isFirebaseConfigured) {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
+  db = getFirestore(app)
+  auth = getAuth(app)
+  storage = getStorage(app)
+}
+
+export { db, auth, storage }
 export default app
-
-
-
-
-
