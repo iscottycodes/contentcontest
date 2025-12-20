@@ -1,0 +1,267 @@
+'use client'
+
+import { useState } from 'react'
+import { FileText, Plus, Search, Edit2, Trash2, Eye, Calendar, Tag, ExternalLink } from 'lucide-react'
+
+// Mock blog posts
+const mockPosts = [
+  { id: 1, title: 'Why I Started ContentContest', type: 'personal', status: 'published', date: '2024-12-15', views: 245 },
+  { id: 2, title: 'Week 12 Winners Announcement', type: 'contest', status: 'published', date: '2024-12-16', views: 512 },
+  { id: 3, title: 'The Beauty of Small Town Creativity', type: 'personal', status: 'published', date: '2024-12-08', views: 189 },
+  { id: 4, title: 'Week 11 Winners Announcement', type: 'contest', status: 'published', date: '2024-12-09', views: 478 },
+  { id: 5, title: 'Thank You to Our Sponsors', type: 'personal', status: 'draft', date: '2024-12-18', views: 0 },
+]
+
+export default function BlogPage() {
+  const [showEditor, setShowEditor] = useState(false)
+  const [editingPost, setEditingPost] = useState<typeof mockPosts[0] | null>(null)
+  const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
+
+  const filteredPosts = mockPosts.filter(post => {
+    if (filter !== 'all' && post.type !== filter) return false
+    if (search && !post.title.toLowerCase().includes(search.toLowerCase())) return false
+    return true
+  })
+
+  const openEditor = (post?: typeof mockPosts[0]) => {
+    setEditingPost(post || null)
+    setShowEditor(true)
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Stats */}
+      <div className="grid sm:grid-cols-3 gap-4">
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-pine-100 flex items-center justify-center">
+              <FileText className="w-6 h-6 text-pine-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-charcoal">{mockPosts.length}</p>
+              <p className="text-sm text-charcoal/60">Total Posts</p>
+            </div>
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-lake-100 flex items-center justify-center">
+              <Eye className="w-6 h-6 text-lake-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-charcoal">{mockPosts.reduce((acc, p) => acc + p.views, 0).toLocaleString()}</p>
+              <p className="text-sm text-charcoal/60">Total Views</p>
+            </div>
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-charcoal">{mockPosts.filter(p => p.status === 'draft').length}</p>
+              <p className="text-sm text-charcoal/60">Drafts</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Header Actions */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-charcoal/40" />
+          <input
+            type="text"
+            placeholder="Search posts..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:border-pine-500 focus:ring-2 focus:ring-pine-500/10 outline-none"
+          />
+        </div>
+        <div className="flex gap-2">
+          {['all', 'contest', 'personal'].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filter === f
+                  ? 'bg-pine-600 text-white'
+                  : 'bg-white text-charcoal/70 hover:bg-slate-50 border border-slate-200'
+              }`}
+            >
+              {f === 'all' ? 'All' : f === 'contest' ? 'Contest' : 'Personal'}
+            </button>
+          ))}
+          <button
+            onClick={() => openEditor()}
+            className="px-4 py-2 rounded-lg bg-pine-600 text-white text-sm font-medium hover:bg-pine-700 transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            New Post
+          </button>
+        </div>
+      </div>
+
+      {/* Posts Table */}
+      <div className="card overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-slate-50 border-b border-slate-100">
+            <tr>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70">Title</th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70 hidden md:table-cell">Type</th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70 hidden sm:table-cell">Date</th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70 hidden lg:table-cell">Views</th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70">Status</th>
+              <th className="text-right px-6 py-4 text-sm font-semibold text-charcoal/70">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filteredPosts.map((post) => (
+              <tr key={post.id} className="hover:bg-slate-50 transition-colors">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      post.type === 'contest' ? 'bg-pine-100' : 'bg-sunset-100'
+                    }`}>
+                      <FileText className={`w-5 h-5 ${
+                        post.type === 'contest' ? 'text-pine-600' : 'text-sunset-600'
+                      }`} />
+                    </div>
+                    <span className="font-medium text-charcoal">{post.title}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 hidden md:table-cell">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    post.type === 'contest' ? 'bg-pine-100 text-pine-700' : 'bg-sunset-100 text-sunset-700'
+                  }`}>
+                    {post.type === 'contest' ? 'Contest' : 'Personal'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-charcoal/60 hidden sm:table-cell">{post.date}</td>
+                <td className="px-6 py-4 text-charcoal/60 hidden lg:table-cell">{post.views.toLocaleString()}</td>
+                <td className="px-6 py-4">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    post.status === 'published' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {post.status === 'published' ? 'Published' : 'Draft'}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center justify-end gap-1">
+                    <button 
+                      onClick={() => openEditor(post)}
+                      className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4 text-charcoal/40" />
+                    </button>
+                    <button className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                      <Eye className="w-4 h-4 text-charcoal/40" />
+                    </button>
+                    <button className="p-2 rounded-lg hover:bg-red-50 transition-colors">
+                      <Trash2 className="w-4 h-4 text-red-400" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {filteredPosts.length === 0 && (
+          <div className="p-12 text-center text-charcoal/50">
+            No blog posts found
+          </div>
+        )}
+      </div>
+
+      {/* Post Editor Modal */}
+      {showEditor && (
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="card p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-charcoal mb-6">
+              {editingPost ? 'Edit Post' : 'New Blog Post'}
+            </h2>
+            <form className="space-y-6">
+              <div>
+                <label className="label-text">Title *</label>
+                <input 
+                  type="text" 
+                  className="input-field text-lg font-semibold" 
+                  placeholder="Enter post title..."
+                  defaultValue={editingPost?.title}
+                  required 
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label-text">Blog Type *</label>
+                  <select className="input-field" defaultValue={editingPost?.type} required>
+                    <option value="">Select type</option>
+                    <option value="contest">Contest Gallery</option>
+                    <option value="personal">From the Editor</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label-text">Status *</label>
+                  <select className="input-field" defaultValue={editingPost?.status} required>
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="label-text">Featured Image</label>
+                <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-pine-400 transition-colors">
+                  <p className="text-sm text-charcoal/50">Click to upload featured image</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="label-text">Content *</label>
+                <textarea
+                  rows={12}
+                  className="input-field resize-none font-mono text-sm"
+                  placeholder="Write your post content here... (Markdown supported)"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="label-text">Excerpt</label>
+                <textarea
+                  rows={3}
+                  className="input-field resize-none"
+                  placeholder="Brief summary for previews..."
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowEditor(false)}
+                  className="btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-secondary flex-1">
+                  Save Draft
+                </button>
+                <button type="submit" className="btn-primary flex-1">
+                  Publish
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+
+
+
