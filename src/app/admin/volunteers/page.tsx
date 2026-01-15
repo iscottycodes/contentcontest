@@ -1,67 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { Search, Mail, Phone, MapPin, Calendar, CheckCircle, XCircle, Clock, MessageSquare, User } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Mail, Phone, MapPin, Calendar, CheckCircle, XCircle, Clock, MessageSquare, User, Loader2 } from 'lucide-react'
+import { getVolunteers, type Volunteer } from '@/lib/firebase-admin'
+import { Timestamp } from 'firebase/firestore'
 
-// Mock volunteer applications
-const mockVolunteers = [
-  { 
-    id: 1, 
-    name: 'Jennifer Lee', 
-    email: 'jennifer@email.com', 
-    phone: '(555) 123-4567',
-    city: 'Georgina',
-    age: '25-34',
-    interests: ['Youth Mentorship', 'Event Planning'],
-    availability: ['Weekday Evenings', 'Weekend Mornings'],
-    commitment: '3-5 hours per week',
-    motivation: 'I want to give back to my community and help young people find their path.',
-    status: 'new',
-    date: '2024-12-19'
-  },
-  { 
-    id: 2, 
-    name: 'Robert Chen', 
-    email: 'robert@email.com', 
-    phone: '(555) 234-5678',
-    city: 'Keswick',
-    age: '45-54',
-    interests: ['Administrative', 'Driving/Transportation'],
-    availability: ['Weekday Mornings', 'Flexible'],
-    commitment: '6-10 hours per week',
-    motivation: 'Recently retired and looking for meaningful ways to stay active in the community.',
-    status: 'contacted',
-    date: '2024-12-18'
-  },
-  { 
-    id: 3, 
-    name: 'Maria Santos', 
-    email: 'maria@email.com', 
-    phone: '(555) 345-6789',
-    city: 'Sutton',
-    age: '35-44',
-    interests: ['Food Security', 'Event Planning', 'Marketing/Social Media'],
-    availability: ['Weekend Afternoons'],
-    commitment: '1-2 hours per week',
-    motivation: 'I believe everyone deserves access to healthy food. Want to help organize community meals.',
-    status: 'interviewed',
-    date: '2024-12-17'
-  },
-  { 
-    id: 4, 
-    name: 'David Thompson', 
-    email: 'david@email.com', 
-    phone: '(555) 456-7890',
-    city: 'Pefferlaw',
-    age: '18-24',
-    interests: ['Sports & Recreation', 'Youth Mentorship'],
-    availability: ['Weekday Evenings', 'Weekend Mornings', 'Weekend Afternoons'],
-    commitment: '3-5 hours per week',
-    motivation: 'As a college student, I want to mentor younger kids in sports the way I was mentored.',
-    status: 'approved',
-    date: '2024-12-10'
-  },
-]
+function formatDate(timestamp: Timestamp | undefined): string {
+  if (!timestamp) return 'N/A'
+  const date = timestamp.toDate()
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
 
 const statusConfig = {
   new: { label: 'New', bgColor: 'bg-amber-100', textColor: 'text-amber-700', icon: Clock },
@@ -72,13 +20,30 @@ const statusConfig = {
 }
 
 export default function VolunteersPage() {
-  const [selectedVolunteer, setSelectedVolunteer] = useState<typeof mockVolunteers[0] | null>(null)
+  const [volunteers, setVolunteers] = useState<Volunteer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null)
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
 
-  const filteredVolunteers = mockVolunteers.filter(vol => {
-    if (filter !== 'all' && vol.status !== filter) return false
-    if (search && !vol.name.toLowerCase().includes(search.toLowerCase()) && !vol.email.toLowerCase().includes(search.toLowerCase())) return false
+  useEffect(() => {
+    async function fetchVolunteers() {
+      try {
+        setLoading(true)
+        const data = await getVolunteers(filter !== 'all' ? filter : undefined)
+        setVolunteers(data)
+      } catch (error) {
+        console.error('Error fetching volunteers:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchVolunteers()
+  }, [filter])
+
+  const filteredVolunteers = volunteers.filter(vol => {
+    const fullName = `${vol.firstName} ${vol.lastName}`.toLowerCase()
+    if (search && !fullName.includes(search.toLowerCase()) && !vol.email.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
 
@@ -116,50 +81,58 @@ export default function VolunteersPage() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Volunteers List */}
         <div className="lg:col-span-2 card divide-y divide-slate-100">
-          {filteredVolunteers.map((vol) => {
-            const status = statusConfig[vol.status as keyof typeof statusConfig]
-            return (
-              <div
-                key={vol.id}
-                onClick={() => setSelectedVolunteer(vol)}
-                className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors ${
-                  selectedVolunteer?.id === vol.id ? 'bg-emerald-50' : ''
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <span className="text-emerald-700 font-semibold">{vol.name.split(' ').map(n => n[0]).join('')}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="font-semibold text-charcoal">{vol.name}</h3>
-                        <p className="text-sm text-charcoal/50">{vol.city} • {vol.age}</p>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${status.bgColor} ${status.textColor}`}>
-                        {status.label}
-                      </span>
+          {loading ? (
+            <div className="p-12 text-center text-charcoal/50">
+              <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-pine-600" />
+              <p>Loading volunteers...</p>
+            </div>
+          ) : filteredVolunteers.length > 0 ? (
+            filteredVolunteers.map((vol) => {
+              const status = statusConfig[vol.status as keyof typeof statusConfig]
+              const fullName = `${vol.firstName} ${vol.lastName}`
+              return (
+                <div
+                  key={vol.id}
+                  onClick={() => setSelectedVolunteer(vol)}
+                  className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors ${
+                    selectedVolunteer?.id === vol.id ? 'bg-emerald-50' : ''
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <span className="text-emerald-700 font-semibold">{vol.firstName[0]}{vol.lastName[0]}</span>
                     </div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {vol.interests.slice(0, 3).map((interest) => (
-                        <span key={interest} className="px-2 py-0.5 rounded bg-slate-100 text-charcoal/60 text-xs">
-                          {interest}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="font-semibold text-charcoal">{fullName}</h3>
+                          <p className="text-sm text-charcoal/50">{vol.city} • {vol.age}</p>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${status.bgColor} ${status.textColor}`}>
+                          {status.label}
                         </span>
-                      ))}
-                      {vol.interests.length > 3 && (
-                        <span className="px-2 py-0.5 rounded bg-slate-100 text-charcoal/60 text-xs">
-                          +{vol.interests.length - 3}
-                        </span>
-                      )}
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {vol.interests.slice(0, 3).map((interest) => (
+                          <span key={interest} className="px-2 py-0.5 rounded bg-slate-100 text-charcoal/60 text-xs">
+                            {interest}
+                          </span>
+                        ))}
+                        {vol.interests.length > 3 && (
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-charcoal/60 text-xs">
+                            +{vol.interests.length - 3}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-          {filteredVolunteers.length === 0 && (
+              )
+            })
+          ) : (
             <div className="p-12 text-center text-charcoal/50">
-              No volunteer applications found
+              <User className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No volunteer applications found</p>
             </div>
           )}
         </div>
@@ -171,10 +144,10 @@ export default function VolunteersPage() {
               <div className="text-center mb-6">
                 <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
                   <span className="text-emerald-700 font-bold text-2xl">
-                    {selectedVolunteer.name.split(' ').map(n => n[0]).join('')}
+                    {selectedVolunteer.firstName[0]}{selectedVolunteer.lastName[0]}
                   </span>
                 </div>
-                <h2 className="text-xl font-bold text-charcoal">{selectedVolunteer.name}</h2>
+                <h2 className="text-xl font-bold text-charcoal">{selectedVolunteer.firstName} {selectedVolunteer.lastName}</h2>
                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium mt-2 ${statusConfig[selectedVolunteer.status as keyof typeof statusConfig].bgColor} ${statusConfig[selectedVolunteer.status as keyof typeof statusConfig].textColor}`}>
                   {statusConfig[selectedVolunteer.status as keyof typeof statusConfig].label}
                 </span>
@@ -195,7 +168,7 @@ export default function VolunteersPage() {
                 </div>
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
                   <Calendar className="w-4 h-4 text-charcoal/40" />
-                  <span>Applied {selectedVolunteer.date}</span>
+                  <span>Applied {formatDate(selectedVolunteer.createdAt as Timestamp)}</span>
                 </div>
               </div>
 
@@ -219,7 +192,7 @@ export default function VolunteersPage() {
                     </span>
                   ))}
                 </div>
-                <p className="text-charcoal/60 mt-2 text-sm">{selectedVolunteer.commitment}</p>
+                <p className="text-charcoal/60 mt-2 text-sm">{selectedVolunteer.commitmentLevel}</p>
               </div>
 
               <div className="mt-6 pt-6 border-t border-slate-100">

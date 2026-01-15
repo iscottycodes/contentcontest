@@ -1,17 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { Building2, Plus, Search, Mail, Phone, DollarSign, Calendar, Edit2, Trash2, ExternalLink, Star } from 'lucide-react'
-
-// Mock sponsors data
-const mockSponsors = [
-  { id: 1, name: 'Georgina Pharmacy', tier: 'gold', contact: 'John Smith', email: 'john@georginapharmacy.ca', phone: '(555) 111-2222', since: '2024-10', status: 'active', logo: null },
-  { id: 2, name: 'Lake Simcoe Marina', tier: 'gold', contact: 'Susan Wong', email: 'susan@lsm.ca', phone: '(555) 222-3333', since: '2024-11', status: 'active', logo: null },
-  { id: 3, name: 'Keswick Auto', tier: 'silver', contact: 'Mike Johnson', email: 'mike@keswickauto.ca', phone: '(555) 333-4444', since: '2024-11', status: 'active', logo: null },
-  { id: 4, name: 'Sutton Bakery', tier: 'silver', contact: 'Maria Garcia', email: 'maria@suttonbakery.ca', phone: '(555) 444-5555', since: '2024-12', status: 'active', logo: null },
-  { id: 5, name: 'Pefferlaw Hardware', tier: 'bronze', contact: 'Tom Brown', email: 'tom@pefhardware.ca', phone: '(555) 555-6666', since: '2024-12', status: 'active', logo: null },
-  { id: 6, name: 'Georgina Realty', tier: 'bronze', contact: 'Lisa Chen', email: 'lisa@grealty.ca', phone: '(555) 666-7777', since: '2024-12', status: 'pending', logo: null },
-]
+import { useState, useEffect } from 'react'
+import { Building2, Plus, Search, Mail, Phone, DollarSign, Calendar, Edit2, Trash2, ExternalLink, Star, Loader2 } from 'lucide-react'
+import { getSponsors, type Sponsor } from '@/lib/firebase-admin'
+import { Timestamp } from 'firebase/firestore'
 
 const tierConfig = {
   gold: { label: 'Gold', bgColor: 'bg-amber-100', textColor: 'text-amber-600', borderColor: 'border-amber-200', cardBg: 'bg-amber-50/50', price: '$500/mo' },
@@ -19,13 +11,35 @@ const tierConfig = {
   bronze: { label: 'Bronze', bgColor: 'bg-orange-100', textColor: 'text-orange-600', borderColor: 'border-orange-200', cardBg: 'bg-orange-50/50', price: '$100/mo' },
 }
 
+function formatDate(timestamp: Timestamp | undefined): string {
+  if (!timestamp) return 'N/A'
+  const date = timestamp.toDate()
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
+}
+
 export default function SponsorsPage() {
+  const [sponsors, setSponsors] = useState<Sponsor[]>([])
+  const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
 
-  const filteredSponsors = mockSponsors.filter(sponsor => {
-    if (filter !== 'all' && sponsor.tier !== filter) return false
+  useEffect(() => {
+    async function fetchSponsors() {
+      try {
+        setLoading(true)
+        const data = await getSponsors(filter !== 'all' ? filter : undefined)
+        setSponsors(data)
+      } catch (error) {
+        console.error('Error fetching sponsors:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchSponsors()
+  }, [filter])
+
+  const filteredSponsors = sponsors.filter(sponsor => {
     if (search && !sponsor.name.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
@@ -33,6 +47,8 @@ export default function SponsorsPage() {
   const goldSponsors = filteredSponsors.filter(s => s.tier === 'gold')
   const silverSponsors = filteredSponsors.filter(s => s.tier === 'silver')
   const bronzeSponsors = filteredSponsors.filter(s => s.tier === 'bronze')
+  
+  const totalRevenue = goldSponsors.length * 500 + silverSponsors.length * 250 + bronzeSponsors.length * 100
 
   return (
     <div className="space-y-6">
@@ -42,7 +58,7 @@ export default function SponsorsPage() {
           <div className="flex items-center gap-3">
             <Star className="w-8 h-8 text-amber-500" />
             <div>
-              <p className="text-2xl font-bold text-charcoal">{mockSponsors.filter(s => s.tier === 'gold').length}</p>
+              <p className="text-2xl font-bold text-charcoal">{goldSponsors.length}</p>
               <p className="text-sm text-charcoal/60">Gold Sponsors</p>
             </div>
           </div>
@@ -51,7 +67,7 @@ export default function SponsorsPage() {
           <div className="flex items-center gap-3">
             <Star className="w-8 h-8 text-slate-400" />
             <div>
-              <p className="text-2xl font-bold text-charcoal">{mockSponsors.filter(s => s.tier === 'silver').length}</p>
+              <p className="text-2xl font-bold text-charcoal">{silverSponsors.length}</p>
               <p className="text-sm text-charcoal/60">Silver Sponsors</p>
             </div>
           </div>
@@ -60,7 +76,7 @@ export default function SponsorsPage() {
           <div className="flex items-center gap-3">
             <Star className="w-8 h-8 text-orange-400" />
             <div>
-              <p className="text-2xl font-bold text-charcoal">{mockSponsors.filter(s => s.tier === 'bronze').length}</p>
+              <p className="text-2xl font-bold text-charcoal">{bronzeSponsors.length}</p>
               <p className="text-sm text-charcoal/60">Bronze Sponsors</p>
             </div>
           </div>
@@ -69,7 +85,7 @@ export default function SponsorsPage() {
           <div className="flex items-center gap-3">
             <DollarSign className="w-8 h-8 text-emerald-500" />
             <div>
-              <p className="text-2xl font-bold text-charcoal">$1,700</p>
+              <p className="text-2xl font-bold text-charcoal">${totalRevenue.toLocaleString()}</p>
               <p className="text-sm text-charcoal/60">Monthly Revenue</p>
             </div>
           </div>
@@ -109,47 +125,63 @@ export default function SponsorsPage() {
         </div>
       </div>
 
-      {/* Sponsors by Tier */}
-      {goldSponsors.length > 0 && (
-        <div>
-          <h2 className="text-lg font-bold text-charcoal mb-4 flex items-center gap-2">
-            <Star className="w-5 h-5 text-amber-500" />
-            Gold Sponsors
-          </h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            {goldSponsors.map((sponsor) => (
-              <SponsorCard key={sponsor.id} sponsor={sponsor} />
-            ))}
-          </div>
+      {loading ? (
+        <div className="card p-12 text-center">
+          <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-pine-600" />
+          <p className="text-charcoal/50">Loading sponsors...</p>
         </div>
-      )}
+      ) : (
+        <>
+          {/* Sponsors by Tier */}
+          {goldSponsors.length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold text-charcoal mb-4 flex items-center gap-2">
+                <Star className="w-5 h-5 text-amber-500" />
+                Gold Sponsors
+              </h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                {goldSponsors.map((sponsor) => (
+                  <SponsorCard key={sponsor.id} sponsor={sponsor} />
+                ))}
+              </div>
+            </div>
+          )}
 
-      {silverSponsors.length > 0 && (
-        <div>
-          <h2 className="text-lg font-bold text-charcoal mb-4 flex items-center gap-2">
-            <Star className="w-5 h-5 text-slate-400" />
-            Silver Sponsors
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {silverSponsors.map((sponsor) => (
-              <SponsorCard key={sponsor.id} sponsor={sponsor} />
-            ))}
-          </div>
-        </div>
-      )}
+          {silverSponsors.length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold text-charcoal mb-4 flex items-center gap-2">
+                <Star className="w-5 h-5 text-slate-400" />
+                Silver Sponsors
+              </h2>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {silverSponsors.map((sponsor) => (
+                  <SponsorCard key={sponsor.id} sponsor={sponsor} />
+                ))}
+              </div>
+            </div>
+          )}
 
-      {bronzeSponsors.length > 0 && (
-        <div>
-          <h2 className="text-lg font-bold text-charcoal mb-4 flex items-center gap-2">
-            <Star className="w-5 h-5 text-orange-400" />
-            Bronze Sponsors
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {bronzeSponsors.map((sponsor) => (
-              <SponsorCard key={sponsor.id} sponsor={sponsor} />
-            ))}
-          </div>
-        </div>
+          {bronzeSponsors.length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold text-charcoal mb-4 flex items-center gap-2">
+                <Star className="w-5 h-5 text-orange-400" />
+                Bronze Sponsors
+              </h2>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {bronzeSponsors.map((sponsor) => (
+                  <SponsorCard key={sponsor.id} sponsor={sponsor} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {filteredSponsors.length === 0 && (
+            <div className="card p-12 text-center text-charcoal/50">
+              <Building2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No sponsors found</p>
+            </div>
+          )}
+        </>
       )}
 
       {/* Add Sponsor Modal */}
@@ -211,16 +243,20 @@ export default function SponsorsPage() {
   )
 }
 
-function SponsorCard({ sponsor }: { sponsor: typeof mockSponsors[0] }) {
+function SponsorCard({ sponsor }: { sponsor: Sponsor }) {
   const tier = tierConfig[sponsor.tier as keyof typeof tierConfig]
   
   return (
     <div className={`card p-5 border-2 ${tier.borderColor} ${tier.cardBg}`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 rounded-xl ${tier.bgColor} flex items-center justify-center`}>
-            <Building2 className={`w-6 h-6 ${tier.textColor}`} />
-          </div>
+          {sponsor.logoUrl ? (
+            <img src={sponsor.logoUrl} alt={sponsor.name} className="w-12 h-12 rounded-xl object-contain" />
+          ) : (
+            <div className={`w-12 h-12 rounded-xl ${tier.bgColor} flex items-center justify-center`}>
+              <Building2 className={`w-6 h-6 ${tier.textColor}`} />
+            </div>
+          )}
           <div>
             <h3 className="font-semibold text-charcoal">{sponsor.name}</h3>
             <span className={`text-xs font-medium ${tier.textColor}`}>{tier.label} • {tier.price}</span>
@@ -249,7 +285,7 @@ function SponsorCard({ sponsor }: { sponsor: typeof mockSponsors[0] }) {
         )}
         <div className="flex items-center gap-2 text-charcoal/60">
           <Calendar className="w-4 h-4" />
-          <span>Since {sponsor.since}</span>
+          <span>Since {formatDate(sponsor.startDate as Timestamp)}</span>
         </div>
       </div>
 
@@ -257,12 +293,14 @@ function SponsorCard({ sponsor }: { sponsor: typeof mockSponsors[0] }) {
         <span className={`px-2 py-1 rounded text-xs font-medium ${
           sponsor.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
         }`}>
-          {sponsor.status === 'active' ? 'Active' : 'Pending'}
+          {sponsor.status === 'active' ? 'Active' : sponsor.status === 'pending' ? 'Pending' : 'Inactive'}
         </span>
-        <button className="text-sm text-pine-600 font-medium hover:underline flex items-center gap-1">
-          View Details
-          <ExternalLink className="w-3 h-3" />
-        </button>
+        {sponsor.website && (
+          <a href={sponsor.website} target="_blank" rel="noopener noreferrer" className="text-sm text-pine-600 font-medium hover:underline flex items-center gap-1">
+            View Website
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        )}
       </div>
     </div>
   )

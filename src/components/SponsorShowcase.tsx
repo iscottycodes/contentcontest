@@ -1,19 +1,28 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
-
-// Placeholder sponsors - these would come from the database in production
-const sponsors = [
-  { id: 1, name: 'Sponsor One', tier: 'gold', logo: null },
-  { id: 2, name: 'Sponsor Two', tier: 'gold', logo: null },
-  { id: 3, name: 'Sponsor Three', tier: 'silver', logo: null },
-  { id: 4, name: 'Sponsor Four', tier: 'silver', logo: null },
-  { id: 5, name: 'Sponsor Five', tier: 'bronze', logo: null },
-  { id: 6, name: 'Sponsor Six', tier: 'bronze', logo: null },
-]
+import { getActiveSponsors, type Sponsor } from '@/lib/firebase-admin'
 
 export default function SponsorShowcase({ showCTA = true }: { showCTA?: boolean }) {
+  const [sponsors, setSponsors] = useState<Sponsor[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchSponsors() {
+      try {
+        const data = await getActiveSponsors()
+        setSponsors(data)
+      } catch (error) {
+        console.error('Error fetching sponsors:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchSponsors()
+  }, [])
+
   const goldSponsors = sponsors.filter(s => s.tier === 'gold')
   const silverSponsors = sponsors.filter(s => s.tier === 'silver')
   const bronzeSponsors = sponsors.filter(s => s.tier === 'bronze')
@@ -39,8 +48,8 @@ export default function SponsorShowcase({ showCTA = true }: { showCTA?: boolean 
                   key={sponsor.id}
                   className="card p-8 w-64 h-40 flex items-center justify-center bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-200 hover:border-amber-400 transition-colors"
                 >
-                  {sponsor.logo ? (
-                    <img src={sponsor.logo} alt={sponsor.name} className="max-h-full max-w-full object-contain" />
+                  {sponsor.logoUrl ? (
+                    <img src={sponsor.logoUrl} alt={sponsor.name} className="max-h-full max-w-full object-contain" />
                   ) : (
                     <div className="text-center">
                       <div className="w-16 h-16 rounded-xl bg-amber-100 flex items-center justify-center mx-auto mb-3">
@@ -65,8 +74,8 @@ export default function SponsorShowcase({ showCTA = true }: { showCTA?: boolean 
                   key={sponsor.id}
                   className="card p-6 w-48 h-32 flex items-center justify-center bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 hover:border-slate-400 transition-colors"
                 >
-                  {sponsor.logo ? (
-                    <img src={sponsor.logo} alt={sponsor.name} className="max-h-full max-w-full object-contain" />
+                  {sponsor.logoUrl ? (
+                    <img src={sponsor.logoUrl} alt={sponsor.name} className="max-h-full max-w-full object-contain" />
                   ) : (
                     <div className="text-center">
                       <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center mx-auto mb-2">
@@ -91,8 +100,8 @@ export default function SponsorShowcase({ showCTA = true }: { showCTA?: boolean 
                   key={sponsor.id}
                   className="card p-4 w-36 h-24 flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100 hover:border-orange-300 transition-colors"
                 >
-                  {sponsor.logo ? (
-                    <img src={sponsor.logo} alt={sponsor.name} className="max-h-full max-w-full object-contain" />
+                  {sponsor.logoUrl ? (
+                    <img src={sponsor.logoUrl} alt={sponsor.name} className="max-h-full max-w-full object-contain" />
                   ) : (
                     <div className="text-center">
                       <span className="text-sm font-medium text-charcoal/60">{sponsor.name}</span>
@@ -104,8 +113,21 @@ export default function SponsorShowcase({ showCTA = true }: { showCTA?: boolean 
           </div>
         )}
 
+        {/* Empty State */}
+        {!loading && sponsors.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-charcoal/60 mb-4">No sponsors yet. Be the first to support local creators!</p>
+            {showCTA && (
+              <Link href="/sponsors#become" className="btn-primary inline-flex items-center gap-2">
+                Become a Sponsor
+                <ExternalLink className="w-4 h-4" />
+              </Link>
+            )}
+          </div>
+        )}
+
         {/* CTA */}
-        {showCTA && (
+        {showCTA && sponsors.length > 0 && (
           <div className="text-center mt-12 pt-8 border-t border-charcoal/10">
             <p className="text-charcoal/60 mb-4">Want to support local creators and get your business featured?</p>
             <Link href="/sponsors#become" className="btn-primary inline-flex items-center gap-2">

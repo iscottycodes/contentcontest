@@ -1,46 +1,42 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Calendar, ArrowRight, Heart, MessageCircle, Share2 } from 'lucide-react'
+import { Calendar, ArrowRight, Heart } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { getBlogPosts, type BlogPost } from '@/lib/firebase-admin'
+import { Timestamp } from 'firebase/firestore'
 
-// Mock blog posts - in production from database/CMS
-const blogPosts = [
-  {
-    id: 1,
-    title: 'Why I Started ContentContest',
-    excerpt: 'Every community has stories worth telling. Georgina is full of talented artists, writers, photographers, and creators who deserve a platform to shine...',
-    date: 'December 15, 2024',
-    readTime: '5 min read',
-    featured: true,
-  },
-  {
-    id: 2,
-    title: 'The Beauty of Small Town Creativity',
-    excerpt: 'There\'s something special about creativity that comes from a place of deep connection to community. When artists create from a place they truly know...',
-    date: 'December 8, 2024',
-    readTime: '4 min read',
-    featured: false,
-  },
-  {
-    id: 3,
-    title: 'Thank You to Our First Sponsors',
-    excerpt: 'I am so grateful to announce our founding sponsors who believed in this vision from day one. Their support makes it possible to offer cash prizes...',
-    date: 'December 1, 2024',
-    readTime: '3 min read',
-    featured: false,
-  },
-  {
-    id: 4,
-    title: 'What Makes Georgina Special',
-    excerpt: 'After living here for over a decade, I\'ve come to appreciate the unique character of our town. From the shores of Lake Simcoe to the trails...',
-    date: 'November 24, 2024',
-    readTime: '6 min read',
-    featured: false,
-  },
-]
+function formatDate(timestamp: Timestamp | undefined): string {
+  if (!timestamp) return ''
+  const date = timestamp.toDate()
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+function estimateReadTime(content: string): string {
+  const wordsPerMinute = 200
+  const words = content.split(/\s+/).length
+  const minutes = Math.ceil(words / wordsPerMinute)
+  return `${minutes} min read`
+}
 
 export default function PersonalBlogPage() {
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchPosts() {
+      try {
+        const data = await getBlogPosts('personal', true)
+        setBlogPosts(data)
+      } catch (error) {
+        console.error('Error fetching blog posts:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPosts()
+  }, [])
   return (
     <div className="pt-32 pb-20">
       <div className="max-w-5xl mx-auto px-6">
@@ -70,74 +66,91 @@ export default function PersonalBlogPage() {
           </div>
         </div>
 
-        {/* Featured Post */}
-        {blogPosts.filter(p => p.featured).map(post => (
-          <motion.article
-            key={post.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="card overflow-hidden mb-12"
-          >
-            <div className="grid lg:grid-cols-5">
-              <div className="lg:col-span-2 bg-gradient-to-br from-sunset-100 to-amber-100 h-64 lg:h-auto flex items-center justify-center">
-                <Heart className="w-20 h-20 text-sunset-300" />
-              </div>
-              <div className="lg:col-span-3 p-8 lg:p-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="px-3 py-1 rounded-full bg-sunset-100 text-sunset-700 text-xs font-semibold">Featured</span>
-                  <span className="text-sm text-charcoal/50">{post.date}</span>
-                </div>
-                <h2 className="text-2xl lg:text-3xl font-bold text-charcoal mb-4">{post.title}</h2>
-                <p className="text-charcoal/60 mb-6 leading-relaxed">{post.excerpt}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-charcoal/40">{post.readTime}</span>
-                  <Link href={`/blog/personal/${post.id}`} className="btn-primary text-sm py-2 px-4 inline-flex items-center gap-2">
-                    Read More
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </motion.article>
-        ))}
-
-        {/* Post List */}
-        <div className="space-y-6">
-          {blogPosts.filter(p => !p.featured).map((post, i) => (
-            <motion.article
-              key={post.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="card p-6 md:p-8 group hover:border-sunset-200"
-            >
-              <div className="flex flex-col md:flex-row md:items-center gap-6">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-sunset-100 to-amber-100 flex items-center justify-center flex-shrink-0">
-                  <Heart className="w-8 h-8 text-sunset-300" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Calendar className="w-4 h-4 text-charcoal/40" />
-                    <span className="text-sm text-charcoal/50">{post.date}</span>
-                    <span className="text-sm text-charcoal/40">•</span>
-                    <span className="text-sm text-charcoal/40">{post.readTime}</span>
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-charcoal/50">Loading blog posts...</p>
+          </div>
+        ) : blogPosts.length === 0 ? (
+          <div className="text-center py-12">
+            <Heart className="w-16 h-16 text-sunset-300 mx-auto mb-4 opacity-50" />
+            <p className="text-charcoal/60">No blog posts yet. Check back soon!</p>
+          </div>
+        ) : (
+          <>
+            {/* Featured Post (first post) */}
+            {blogPosts.length > 0 && (
+              <motion.article
+                key={blogPosts[0].id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="card overflow-hidden mb-12"
+              >
+                <div className="grid lg:grid-cols-5">
+                  <div className="lg:col-span-2 bg-gradient-to-br from-sunset-100 to-amber-100 h-64 lg:h-auto flex items-center justify-center">
+                    {blogPosts[0].featuredImage ? (
+                      <img src={blogPosts[0].featuredImage} alt={blogPosts[0].title} className="w-full h-full object-cover" />
+                    ) : (
+                      <Heart className="w-20 h-20 text-sunset-300" />
+                    )}
                   </div>
-                  <h3 className="text-xl font-bold text-charcoal mb-2 group-hover:text-sunset-600 transition-colors">
-                    {post.title}
-                  </h3>
-                  <p className="text-charcoal/60 line-clamp-2">{post.excerpt}</p>
+                  <div className="lg:col-span-3 p-8 lg:p-10">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="px-3 py-1 rounded-full bg-sunset-100 text-sunset-700 text-xs font-semibold">Featured</span>
+                      <span className="text-sm text-charcoal/50">{formatDate(blogPosts[0].publishedAt as Timestamp)}</span>
+                    </div>
+                    <h2 className="text-2xl lg:text-3xl font-bold text-charcoal mb-4">{blogPosts[0].title}</h2>
+                    <p className="text-charcoal/60 mb-6 leading-relaxed">{blogPosts[0].excerpt || blogPosts[0].content.substring(0, 150) + '...'}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-charcoal/40">{estimateReadTime(blogPosts[0].content)}</span>
+                      <Link href={`/blog/personal/${blogPosts[0].id}`} className="btn-primary text-sm py-2 px-4 inline-flex items-center gap-2">
+                        Read More
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-                <Link 
-                  href={`/blog/personal/${post.id}`}
-                  className="text-sunset-600 font-semibold text-sm flex items-center gap-2 hover:gap-3 transition-all"
+              </motion.article>
+            )}
+
+            {/* Post List */}
+            <div className="space-y-6">
+              {blogPosts.slice(1).map((post, i) => (
+                <motion.article
+                  key={post.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="card p-6 md:p-8 group hover:border-sunset-200"
                 >
-                  Read
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </motion.article>
-          ))}
-        </div>
+                  <div className="flex flex-col md:flex-row md:items-center gap-6">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-sunset-100 to-amber-100 flex items-center justify-center flex-shrink-0">
+                      <Heart className="w-8 h-8 text-sunset-300" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Calendar className="w-4 h-4 text-charcoal/40" />
+                        <span className="text-sm text-charcoal/50">{formatDate(post.publishedAt as Timestamp)}</span>
+                        <span className="text-sm text-charcoal/40">•</span>
+                        <span className="text-sm text-charcoal/40">{estimateReadTime(post.content)}</span>
+                      </div>
+                      <h3 className="text-xl font-bold text-charcoal mb-2 group-hover:text-sunset-600 transition-colors">
+                        {post.title}
+                      </h3>
+                      <p className="text-charcoal/60 line-clamp-2">{post.excerpt || post.content.substring(0, 150) + '...'}</p>
+                    </div>
+                    <Link 
+                      href={`/blog/personal/${post.id}`}
+                      className="text-sunset-600 font-semibold text-sm flex items-center gap-2 hover:gap-3 transition-all"
+                    >
+                      Read
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </motion.article>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Newsletter CTA */}
         <div className="mt-16 card p-8 md:p-12 bg-charcoal text-white text-center">

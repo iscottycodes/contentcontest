@@ -1,30 +1,46 @@
 'use client'
 
-import { useState } from 'react'
-import { FileText, Plus, Search, Edit2, Trash2, Eye, Calendar, Tag, ExternalLink } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { FileText, Plus, Search, Edit2, Trash2, Eye, Calendar, Tag, ExternalLink, Loader2 } from 'lucide-react'
+import { getBlogPosts, type BlogPost } from '@/lib/firebase-admin'
+import { Timestamp } from 'firebase/firestore'
 
-// Mock blog posts
-const mockPosts = [
-  { id: 1, title: 'Why I Started ContentContest', type: 'personal', status: 'published', date: '2024-12-15', views: 245 },
-  { id: 2, title: 'Week 12 Winners Announcement', type: 'contest', status: 'published', date: '2024-12-16', views: 512 },
-  { id: 3, title: 'The Beauty of Small Town Creativity', type: 'personal', status: 'published', date: '2024-12-08', views: 189 },
-  { id: 4, title: 'Week 11 Winners Announcement', type: 'contest', status: 'published', date: '2024-12-09', views: 478 },
-  { id: 5, title: 'Thank You to Our Sponsors', type: 'personal', status: 'draft', date: '2024-12-18', views: 0 },
-]
+function formatDate(timestamp: Timestamp | undefined): string {
+  if (!timestamp) return 'N/A'
+  const date = timestamp.toDate()
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
 
 export default function BlogPage() {
+  const [posts, setPosts] = useState<BlogPost[]>([])
+  const [loading, setLoading] = useState(true)
   const [showEditor, setShowEditor] = useState(false)
-  const [editingPost, setEditingPost] = useState<typeof mockPosts[0] | null>(null)
+  const [editingPost, setEditingPost] = useState<BlogPost | null>(null)
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
 
-  const filteredPosts = mockPosts.filter(post => {
+  useEffect(() => {
+    async function fetchPosts() {
+      try {
+        setLoading(true)
+        const data = await getBlogPosts()
+        setPosts(data)
+      } catch (error) {
+        console.error('Error fetching blog posts:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPosts()
+  }, [])
+
+  const filteredPosts = posts.filter(post => {
     if (filter !== 'all' && post.type !== filter) return false
     if (search && !post.title.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
 
-  const openEditor = (post?: typeof mockPosts[0]) => {
+  const openEditor = (post?: BlogPost) => {
     setEditingPost(post || null)
     setShowEditor(true)
   }
@@ -39,7 +55,7 @@ export default function BlogPage() {
               <FileText className="w-6 h-6 text-pine-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-charcoal">{mockPosts.length}</p>
+              <p className="text-2xl font-bold text-charcoal">{posts.length}</p>
               <p className="text-sm text-charcoal/60">Total Posts</p>
             </div>
           </div>
@@ -50,7 +66,7 @@ export default function BlogPage() {
               <Eye className="w-6 h-6 text-lake-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-charcoal">{mockPosts.reduce((acc, p) => acc + p.views, 0).toLocaleString()}</p>
+              <p className="text-2xl font-bold text-charcoal">{posts.reduce((acc, p) => acc + (p.views || 0), 0).toLocaleString()}</p>
               <p className="text-sm text-charcoal/60">Total Views</p>
             </div>
           </div>
@@ -61,7 +77,7 @@ export default function BlogPage() {
               <Calendar className="w-6 h-6 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-charcoal">{mockPosts.filter(p => p.status === 'draft').length}</p>
+              <p className="text-2xl font-bold text-charcoal">{posts.filter(p => p.status === 'draft').length}</p>
               <p className="text-sm text-charcoal/60">Drafts</p>
             </div>
           </div>
@@ -106,71 +122,79 @@ export default function BlogPage() {
 
       {/* Posts Table */}
       <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70">Title</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70 hidden md:table-cell">Type</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70 hidden sm:table-cell">Date</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70 hidden lg:table-cell">Views</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70">Status</th>
-              <th className="text-right px-6 py-4 text-sm font-semibold text-charcoal/70">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filteredPosts.map((post) => (
-              <tr key={post.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      post.type === 'contest' ? 'bg-pine-100' : 'bg-sunset-100'
-                    }`}>
-                      <FileText className={`w-5 h-5 ${
-                        post.type === 'contest' ? 'text-pine-600' : 'text-sunset-600'
-                      }`} />
-                    </div>
-                    <span className="font-medium text-charcoal">{post.title}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 hidden md:table-cell">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    post.type === 'contest' ? 'bg-pine-100 text-pine-700' : 'bg-sunset-100 text-sunset-700'
-                  }`}>
-                    {post.type === 'contest' ? 'Contest' : 'Personal'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-charcoal/60 hidden sm:table-cell">{post.date}</td>
-                <td className="px-6 py-4 text-charcoal/60 hidden lg:table-cell">{post.views.toLocaleString()}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    post.status === 'published' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {post.status === 'published' ? 'Published' : 'Draft'}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center justify-end gap-1">
-                    <button 
-                      onClick={() => openEditor(post)}
-                      className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                      <Edit2 className="w-4 h-4 text-charcoal/40" />
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                      <Eye className="w-4 h-4 text-charcoal/40" />
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-red-50 transition-colors">
-                      <Trash2 className="w-4 h-4 text-red-400" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filteredPosts.length === 0 && (
+        {loading ? (
           <div className="p-12 text-center text-charcoal/50">
-            No blog posts found
+            <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-pine-600" />
+            <p>Loading blog posts...</p>
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70">Title</th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70 hidden md:table-cell">Type</th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70 hidden sm:table-cell">Date</th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70 hidden lg:table-cell">Views</th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-charcoal/70">Status</th>
+                <th className="text-right px-6 py-4 text-sm font-semibold text-charcoal/70">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredPosts.map((post) => (
+                <tr key={post.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        post.type === 'contest' ? 'bg-pine-100' : 'bg-sunset-100'
+                      }`}>
+                        <FileText className={`w-5 h-5 ${
+                          post.type === 'contest' ? 'text-pine-600' : 'text-sunset-600'
+                        }`} />
+                      </div>
+                      <span className="font-medium text-charcoal">{post.title}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 hidden md:table-cell">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      post.type === 'contest' ? 'bg-pine-100 text-pine-700' : 'bg-sunset-100 text-sunset-700'
+                    }`}>
+                      {post.type === 'contest' ? 'Contest' : 'Personal'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-charcoal/60 hidden sm:table-cell">{formatDate(post.publishedAt as Timestamp)}</td>
+                  <td className="px-6 py-4 text-charcoal/60 hidden lg:table-cell">{(post.views || 0).toLocaleString()}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      post.status === 'published' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      {post.status === 'published' ? 'Published' : 'Draft'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-end gap-1">
+                      <button 
+                        onClick={() => openEditor(post)}
+                        className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4 text-charcoal/40" />
+                      </button>
+                      <button className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                        <Eye className="w-4 h-4 text-charcoal/40" />
+                      </button>
+                      <button className="p-2 rounded-lg hover:bg-red-50 transition-colors">
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {!loading && filteredPosts.length === 0 && (
+          <div className="p-12 text-center text-charcoal/50">
+            <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>No blog posts found</p>
           </div>
         )}
       </div>
@@ -189,7 +213,7 @@ export default function BlogPage() {
                   type="text" 
                   className="input-field text-lg font-semibold" 
                   placeholder="Enter post title..."
-                  defaultValue={editingPost?.title}
+                  defaultValue={editingPost?.title || ''}
                   required 
                 />
               </div>

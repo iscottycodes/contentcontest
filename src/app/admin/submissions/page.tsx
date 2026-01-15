@@ -1,17 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { Trophy, Search, Filter, CheckCircle, XCircle, Star, Eye, MoreVertical, Calendar, Camera, Pen, Video, Music } from 'lucide-react'
-
-// Mock submissions data
-const mockSubmissions = [
-  { id: 1, title: 'Golden Hour at Lake Simcoe', author: 'Sarah M.', email: 'sarah@email.com', type: 'photo', status: 'pending', date: '2024-12-19', description: 'Captured during a peaceful evening walk...' },
-  { id: 2, title: 'Voices of Georgina', author: 'Mike T.', email: 'mike@email.com', type: 'audio', status: 'pending', date: '2024-12-19', description: 'A community song celebrating our town...' },
-  { id: 3, title: 'The Old Bridge', author: 'Emily R.', email: 'emily@email.com', type: 'writing', status: 'reviewed', date: '2024-12-18', description: 'A short story about the historic bridge...' },
-  { id: 4, title: 'Winter Morning', author: 'James K.', email: 'james@email.com', type: 'photo', status: 'winner', place: 1, date: '2024-12-15', description: 'First snow of the season...' },
-  { id: 5, title: 'Market Day', author: 'Patricia L.', email: 'patricia@email.com', type: 'video', status: 'winner', place: 2, date: '2024-12-15', description: 'Documentary about the farmers market...' },
-  { id: 6, title: 'Summer Memories', author: 'Alex R.', email: 'alex@email.com', type: 'photo', status: 'rejected', date: '2024-12-14', description: 'Beach photos from last summer...' },
-]
+import { useState, useEffect } from 'react'
+import { Trophy, Search, Filter, CheckCircle, XCircle, Star, Eye, MoreVertical, Calendar, Camera, Pen, Video, Music, Loader2 } from 'lucide-react'
+import { getSubmissions, type Submission } from '@/lib/firebase-admin'
+import { Timestamp } from 'firebase/firestore'
 
 const typeIcons = {
   photo: Camera,
@@ -27,13 +19,35 @@ const statusConfig = {
   rejected: { label: 'Rejected', bgColor: 'bg-red-100', textColor: 'text-red-700', icon: XCircle },
 }
 
+function formatDate(timestamp: Timestamp | undefined): string {
+  if (!timestamp) return 'N/A'
+  const date = timestamp.toDate()
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
 export default function SubmissionsPage() {
-  const [selectedSubmission, setSelectedSubmission] = useState<typeof mockSubmissions[0] | null>(null)
+  const [submissions, setSubmissions] = useState<Submission[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null)
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
 
-  const filteredSubmissions = mockSubmissions.filter(sub => {
-    if (filter !== 'all' && sub.status !== filter) return false
+  useEffect(() => {
+    async function fetchSubmissions() {
+      try {
+        setLoading(true)
+        const data = await getSubmissions(filter !== 'all' ? filter : undefined)
+        setSubmissions(data)
+      } catch (error) {
+        console.error('Error fetching submissions:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchSubmissions()
+  }, [filter])
+
+  const filteredSubmissions = submissions.filter(sub => {
     if (search && !sub.title.toLowerCase().includes(search.toLowerCase()) && !sub.author.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
@@ -72,48 +86,55 @@ export default function SubmissionsPage() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Submissions List */}
         <div className="lg:col-span-2 card divide-y divide-slate-100">
-          {filteredSubmissions.map((sub) => {
-            const TypeIcon = typeIcons[sub.type as keyof typeof typeIcons]
-            const status = statusConfig[sub.status as keyof typeof statusConfig]
-            return (
-              <div
-                key={sub.id}
-                onClick={() => setSelectedSubmission(sub)}
-                className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors ${
-                  selectedSubmission?.id === sub.id ? 'bg-pine-50' : ''
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
-                    <TypeIcon className="w-6 h-6 text-charcoal/40" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="font-semibold text-charcoal truncate">{sub.title}</h3>
-                        <p className="text-sm text-charcoal/50">by {sub.author}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {sub.place && (
-                          <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-700 text-xs font-medium">
-                            <Trophy className="w-3 h-3" />
-                            #{sub.place}
-                          </span>
-                        )}
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${status.bgColor} ${status.textColor}`}>
-                          {status.label}
-                        </span>
-                      </div>
+          {loading ? (
+            <div className="p-12 text-center text-charcoal/50">
+              <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-pine-600" />
+              <p>Loading submissions...</p>
+            </div>
+          ) : filteredSubmissions.length > 0 ? (
+            filteredSubmissions.map((sub) => {
+              const TypeIcon = typeIcons[sub.type as keyof typeof typeIcons]
+              const status = statusConfig[sub.status as keyof typeof statusConfig]
+              return (
+                <div
+                  key={sub.id}
+                  onClick={() => setSelectedSubmission(sub)}
+                  className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors ${
+                    selectedSubmission?.id === sub.id ? 'bg-pine-50' : ''
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
+                      <TypeIcon className="w-6 h-6 text-charcoal/40" />
                     </div>
-                    <p className="text-sm text-charcoal/60 mt-1 line-clamp-1">{sub.description}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="font-semibold text-charcoal truncate">{sub.title}</h3>
+                          <p className="text-sm text-charcoal/50">by {sub.author}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {sub.place && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-700 text-xs font-medium">
+                              <Trophy className="w-3 h-3" />
+                              #{sub.place}
+                            </span>
+                          )}
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${status.bgColor} ${status.textColor}`}>
+                            {status.label}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-charcoal/60 mt-1 line-clamp-1">{sub.description}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-          {filteredSubmissions.length === 0 && (
+              )
+            })
+          ) : (
             <div className="p-12 text-center text-charcoal/50">
-              No submissions found
+              <Eye className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No submissions found</p>
             </div>
           )}
         </div>
@@ -159,7 +180,7 @@ export default function SubmissionsPage() {
                   </div>
                   <div>
                     <p className="text-charcoal/50 mb-1">Submitted</p>
-                    <p className="font-medium text-charcoal">{selectedSubmission.date}</p>
+                    <p className="font-medium text-charcoal">{formatDate(selectedSubmission.createdAt as Timestamp)}</p>
                   </div>
                 </div>
 

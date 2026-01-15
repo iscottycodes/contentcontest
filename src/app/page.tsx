@@ -194,20 +194,13 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div 
-                  key={i} 
-                  className={`card overflow-hidden ${i === 1 ? 'row-span-2' : ''}`}
-                >
-                  <div className={`bg-gradient-to-br from-pine-100 to-lake-100 ${i === 1 ? 'h-full min-h-[300px]' : 'h-40'} flex items-center justify-center`}>
-                    <div className="text-center p-4">
-                      <Star className="w-8 h-8 text-pine-400 mx-auto mb-2" />
-                      <span className="text-sm text-charcoal/50">Winner #{i}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="text-center py-12">
+              <Star className="w-16 h-16 text-pine-300 mx-auto mb-4 opacity-50" />
+              <p className="text-charcoal/60 mb-4">No winners yet. Be the first to win!</p>
+              <Link href="/submit" className="btn-primary inline-flex items-center gap-2">
+                Submit Your Entry
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
           </div>
         </div>
