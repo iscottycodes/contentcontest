@@ -42,6 +42,9 @@ export default function AdminDashboard() {
             <p className="text-white/80">Here's what's happening with ContentContest this week.</p>
           </div>
           <div className="flex gap-3">
+            <Link href="/admin/contests" className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+              Manage Contests
+            </Link>
             <Link href="/admin/submissions" className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
               Review Submissions
             </Link>
@@ -143,6 +146,9 @@ export default function AdminDashboard() {
           <div className="card p-6">
             <h3 className="font-bold text-charcoal mb-4">Quick Actions</h3>
             <div className="space-y-2">
+              <Link href="/admin/contests" className="block w-full p-3 rounded-lg bg-amber-100 text-amber-700 font-medium text-sm hover:bg-amber-200 transition-colors text-center">
+                🎯 Manage Contests
+              </Link>
               <Link href="/admin/submissions?action=announce" className="block w-full p-3 rounded-lg bg-sunset-100 text-sunset-700 font-medium text-sm hover:bg-sunset-200 transition-colors text-center">
                 🏆 Announce Winners
               </Link>

@@ -15,13 +15,15 @@ import {
   LogOut,
   Bell,
   ChevronDown,
-  Heart
+  Heart,
+  Calendar
 } from 'lucide-react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { useAuth } from '@/lib/auth-context'
 
 const sidebarLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/contests', label: 'Contests', icon: Calendar },
   { href: '/admin/submissions', label: 'Contest Submissions', icon: Trophy },
   { href: '/admin/sponsors', label: 'Sponsors', icon: Building2 },
   { href: '/admin/volunteers', label: 'Volunteer Applications', icon: Heart },

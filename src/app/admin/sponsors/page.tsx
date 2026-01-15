@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Building2, Plus, Search, Mail, Phone, DollarSign, Calendar, Edit2, Trash2, ExternalLink, Star, Loader2 } from 'lucide-react'
+import { Building2, Plus, Search, Mail, Phone, Calendar, Edit2, Trash2, ExternalLink, Star, Loader2 } from 'lucide-react'
 import { getSponsors, type Sponsor } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase/firestore'
 
 const tierConfig = {
-  gold: { label: 'Gold', bgColor: 'bg-amber-100', textColor: 'text-amber-600', borderColor: 'border-amber-200', cardBg: 'bg-amber-50/50', price: '$500/mo' },
-  silver: { label: 'Silver', bgColor: 'bg-slate-100', textColor: 'text-slate-500', borderColor: 'border-slate-200', cardBg: 'bg-slate-50/50', price: '$250/mo' },
-  bronze: { label: 'Bronze', bgColor: 'bg-orange-100', textColor: 'text-orange-600', borderColor: 'border-orange-200', cardBg: 'bg-orange-50/50', price: '$100/mo' },
+  gold: { label: 'Gold', bgColor: 'bg-amber-100', textColor: 'text-amber-600', borderColor: 'border-amber-200', cardBg: 'bg-amber-50/50' },
+  silver: { label: 'Silver', bgColor: 'bg-slate-100', textColor: 'text-slate-500', borderColor: 'border-slate-200', cardBg: 'bg-slate-50/50' },
+  bronze: { label: 'Bronze', bgColor: 'bg-orange-100', textColor: 'text-orange-600', borderColor: 'border-orange-200', cardBg: 'bg-orange-50/50' },
 }
 
 function formatDate(timestamp: Timestamp | undefined): string {
@@ -47,8 +47,6 @@ export default function SponsorsPage() {
   const goldSponsors = filteredSponsors.filter(s => s.tier === 'gold')
   const silverSponsors = filteredSponsors.filter(s => s.tier === 'silver')
   const bronzeSponsors = filteredSponsors.filter(s => s.tier === 'bronze')
-  
-  const totalRevenue = goldSponsors.length * 500 + silverSponsors.length * 250 + bronzeSponsors.length * 100
 
   return (
     <div className="space-y-6">
@@ -83,10 +81,10 @@ export default function SponsorsPage() {
         </div>
         <div className="card p-4 bg-emerald-50 border-emerald-200">
           <div className="flex items-center gap-3">
-            <DollarSign className="w-8 h-8 text-emerald-500" />
+            <Building2 className="w-8 h-8 text-emerald-500" />
             <div>
-              <p className="text-2xl font-bold text-charcoal">${totalRevenue.toLocaleString()}</p>
-              <p className="text-sm text-charcoal/60">Monthly Revenue</p>
+              <p className="text-2xl font-bold text-charcoal">{filteredSponsors.length}</p>
+              <p className="text-sm text-charcoal/60">Total Sponsors</p>
             </div>
           </div>
         </div>
@@ -198,9 +196,9 @@ export default function SponsorsPage() {
                 <label className="label-text">Sponsorship Tier *</label>
                 <select className="input-field" required>
                   <option value="">Select tier</option>
-                  <option value="gold">Gold - $500/mo</option>
-                  <option value="silver">Silver - $250/mo</option>
-                  <option value="bronze">Bronze - $100/mo</option>
+                  <option value="gold">Gold</option>
+                  <option value="silver">Silver</option>
+                  <option value="bronze">Bronze</option>
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -259,7 +257,7 @@ function SponsorCard({ sponsor }: { sponsor: Sponsor }) {
           )}
           <div>
             <h3 className="font-semibold text-charcoal">{sponsor.name}</h3>
-            <span className={`text-xs font-medium ${tier.textColor}`}>{tier.label} • {tier.price}</span>
+            <span className={`text-xs font-medium ${tier.textColor}`}>{tier.label}</span>
           </div>
         </div>
         <div className="flex gap-1">

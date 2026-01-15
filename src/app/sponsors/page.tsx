@@ -2,61 +2,22 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Trophy, Star, CheckCircle, ArrowRight, Building2, Users, Eye, Megaphone, CreditCard, Mail, Send } from 'lucide-react'
+import { Trophy, CheckCircle, ArrowRight, Building2, Users, Eye, Megaphone, Mail, Send } from 'lucide-react'
 import { motion } from 'framer-motion'
 import SponsorShowcase from '@/components/SponsorShowcase'
 
-const sponsorTiers = [
-  {
-    id: 'gold',
-    name: 'Gold Sponsor',
-    price: '$500',
-    period: '/month',
-    color: 'amber',
-    features: [
-      'Premium logo placement on homepage',
-      'Featured in all contest announcements',
-      'Large ad banner on all pages',
-      'Social media promotion (weekly)',
-      'Exclusive sponsor spotlight blog post',
-      'Logo on winner certificates',
-    ],
-    popular: true,
-  },
-  {
-    id: 'silver',
-    name: 'Silver Sponsor',
-    price: '$250',
-    period: '/month',
-    color: 'slate',
-    features: [
-      'Logo placement on homepage',
-      'Mentioned in contest announcements',
-      'Medium ad placement',
-      'Social media promotion (bi-weekly)',
-      'Logo on sponsor page',
-    ],
-    popular: false,
-  },
-  {
-    id: 'bronze',
-    name: 'Bronze Sponsor',
-    price: '$100',
-    period: '/month',
-    color: 'orange',
-    features: [
-      'Logo on sponsor page',
-      'Small ad placement',
-      'Monthly social media mention',
-      'Thank you in newsletter',
-    ],
-    popular: false,
-  },
+const sponsorBenefits = [
+  'Premium logo placement on homepage',
+  'Featured in all contest announcements',
+  'Social media promotion',
+  'Exclusive sponsor spotlight blog post',
+  'Logo on winner certificates',
+  'Recognition on sponsor page',
+  'Community engagement opportunities',
 ]
 
 export default function SponsorsPage() {
   const [showContactForm, setShowContactForm] = useState(false)
-  const [selectedTier, setSelectedTier] = useState('')
 
   return (
     <div className="pt-32 pb-20">
@@ -100,76 +61,36 @@ export default function SponsorsPage() {
         </div>
       </section>
 
-      {/* Pricing Tiers */}
+      {/* Sponsorship Benefits */}
       <section id="become" className="py-20 bg-gradient-to-b from-cream to-white">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-4xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="section-title mb-4">Sponsorship Packages</h2>
+            <h2 className="section-title mb-4">Become a Sponsor</h2>
             <p className="section-subtitle mx-auto">
-              Choose the package that fits your business. All sponsors receive recognition on our platform.
+              Support local creativity and get your business featured across our platform. 
+              Connect with us to discuss sponsorship opportunities tailored to your business.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {sponsorTiers.map((tier) => (
-              <motion.div
-                key={tier.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`card p-8 relative ${tier.popular ? 'border-2 border-amber-400 shadow-xl' : ''}`}
+          <div className="card p-8 md:p-12 mb-8">
+            <h3 className="text-2xl font-bold text-charcoal mb-6 text-center">Sponsorship Benefits</h3>
+            <div className="grid sm:grid-cols-2 gap-4 mb-8">
+              {sponsorBenefits.map((benefit, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-pine-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-charcoal/70">{benefit}</span>
+                </div>
+              ))}
+            </div>
+            <div className="text-center">
+              <button
+                onClick={() => setShowContactForm(true)}
+                className="btn-primary inline-flex items-center gap-2 px-8 py-4 text-lg"
               >
-                {tier.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-amber-400 text-amber-900 text-xs font-bold rounded-full">
-                    Most Popular
-                  </div>
-                )}
-                <div className={`w-14 h-14 rounded-2xl bg-${tier.color}-100 flex items-center justify-center mb-6`}>
-                  <Star className={`w-7 h-7 text-${tier.color}-500`} />
-                </div>
-                <h3 className="text-xl font-bold text-charcoal mb-2">{tier.name}</h3>
-                <div className="mb-6">
-                  <span className="text-4xl font-display font-bold text-charcoal">{tier.price}</span>
-                  <span className="text-charcoal/50">{tier.period}</span>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {tier.features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-pine-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-charcoal/70">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => {
-                    setSelectedTier(tier.id)
-                    setShowContactForm(true)
-                  }}
-                  className={`w-full py-3 rounded-full font-semibold transition-all ${
-                    tier.popular
-                      ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-amber-900 hover:shadow-lg hover:shadow-amber-500/25'
-                      : 'btn-secondary'
-                  }`}
-                >
-                  Get Started
-                </button>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Custom Sponsorship */}
-          <div className="mt-12 text-center">
-            <p className="text-charcoal/60 mb-4">
-              Looking for something different? We offer custom sponsorship packages including ad takeovers and exclusive partnerships.
-            </p>
-            <button
-              onClick={() => {
-                setSelectedTier('custom')
-                setShowContactForm(true)
-              }}
-              className="text-pine-600 font-semibold hover:underline"
-            >
-              Contact us for custom options →
-            </button>
+                Connect With Us to Sponsor
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -184,10 +105,7 @@ export default function SponsorsPage() {
           >
             <h2 className="text-2xl font-bold text-charcoal mb-2">Become a Sponsor</h2>
             <p className="text-charcoal/60 mb-6">
-              {selectedTier === 'custom' 
-                ? 'Tell us about your custom sponsorship needs.'
-                : `You've selected the ${selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)} package.`
-              }
+              Tell us about your business and how you'd like to support ContentContest. We'll work with you to create a sponsorship package that fits your goals.
             </p>
             <form className="space-y-4">
               <div>

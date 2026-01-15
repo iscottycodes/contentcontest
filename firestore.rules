@@ -13,6 +13,12 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
     
+    // Public read for contests (open or completed)
+    match /contests/{document=**} {
+      allow read: if resource.data.status == 'open' || resource.data.status == 'completed';
+      allow write: if request.auth != null;
+    }
+    
     // Public write for submissions and volunteers
     match /submissions/{document=**} {
       allow create: if true;

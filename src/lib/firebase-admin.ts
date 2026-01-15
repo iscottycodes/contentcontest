@@ -25,6 +25,7 @@ export const COLLECTIONS = {
   SPONSORS: 'sponsors',
   VOLUNTEERS: 'volunteers',
   BLOG_POSTS: 'blog_posts',
+  CONTESTS: 'contests',
   SETTINGS: 'settings',
   USERS: 'users',
 } as const
@@ -96,6 +97,23 @@ export interface BlogPost {
   author: string
   views: number
   publishedAt?: Timestamp
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+export interface Contest {
+  id?: string
+  title: string
+  description?: string
+  week: string
+  status: 'draft' | 'open' | 'closed' | 'judging' | 'completed'
+  openDate: Timestamp
+  closeDate: Timestamp
+  announceDate?: Timestamp
+  prizeFirst?: number
+  prizeSecond?: number
+  prizeThird?: number
+  rules?: string[]
   createdAt: Timestamp
   updatedAt: Timestamp
 }
@@ -289,4 +307,62 @@ export async function incrementBlogViews(id: string) {
     const currentViews = snapshot.data().views || 0
     return updateDoc(docRef, { views: currentViews + 1 })
   }
+}
+
+// Contests
+export async function getContests(statusFilter?: string) {
+  const database = checkFirebase()
+  const contestsRef = collection(database, COLLECTIONS.CONTESTS)
+  let q = query(contestsRef, orderBy('openDate', 'desc'))
+  
+  if (statusFilter && statusFilter !== 'all') {
+    q = query(contestsRef, where('status', '==', statusFilter), orderBy('openDate', 'desc'))
+  }
+  
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contest))
+}
+
+export async function getContest(id: string) {
+  const database = checkFirebase()
+  const docRef = doc(database, COLLECTIONS.CONTESTS, id)
+  const snapshot = await getDoc(docRef)
+  if (snapshot.exists()) {
+    return { id: snapshot.id, ...snapshot.data() } as Contest
+  }
+  return null
+}
+
+export async function getActiveContest() {
+  const database = checkFirebase()
+  const contestsRef = collection(database, COLLECTIONS.CONTESTS)
+  const q = query(contestsRef, where('status', '==', 'open'), orderBy('openDate', 'desc'), limit(1))
+  const snapshot = await getDocs(q)
+  if (snapshot.empty) return null
+  return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Contest
+}
+
+export async function addContest(data: Omit<Contest, 'id' | 'createdAt' | 'updatedAt'>) {
+  const database = checkFirebase()
+  const contestsRef = collection(database, COLLECTIONS.CONTESTS)
+  return addDoc(contestsRef, {
+    ...data,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export async function updateContest(id: string, data: Partial<Contest>) {
+  const database = checkFirebase()
+  const docRef = doc(database, COLLECTIONS.CONTESTS, id)
+  return updateDoc(docRef, {
+    ...data,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export async function deleteContest(id: string) {
+  const database = checkFirebase()
+  const docRef = doc(database, COLLECTIONS.CONTESTS, id)
+  return deleteDoc(docRef)
 }
