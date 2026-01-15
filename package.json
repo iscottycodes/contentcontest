@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check-build": "node scripts/check-build.js",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "firebase": "^12.7.0",
