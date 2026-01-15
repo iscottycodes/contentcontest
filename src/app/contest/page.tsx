@@ -105,7 +105,7 @@ export default function ContestPage() {
             </h2>
             <div className="space-y-4">
               {[
-                'Must be a resident of Georgina or surrounding areas',
+                'Must be a resident of Georgina',
                 'Open to all ages (minors need parental consent)',
                 'One submission per person, per week',
                 'Content must be original and created by the submitter',
@@ -183,7 +183,7 @@ export default function ContestPage() {
             </div>
           </div>
           <p className="text-center text-charcoal/50 mt-8 text-sm">
-            * Prize amounts are subject to sponsor support. All winners receive feature placement on our website and social recognition.
+            * Prize amounts are subject to sponsor support and may be adjusted. All winners receive feature placement on our website and social recognition.
           </p>
         </div>
       </section>

@@ -18,6 +18,7 @@ export default function SubmitPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    postalCode: '',
     title: '',
     contentType: '',
     description: '',
@@ -87,6 +88,7 @@ export default function SubmitPage() {
         title: formData.title,
         author: formData.name,
         email: formData.email,
+        postalCode: formData.postalCode.replace(/\s/g, ''), // Remove spaces before saving
         type: formData.contentType as 'photo' | 'writing' | 'video' | 'audio',
         description: formData.description,
         fileUrl,
@@ -214,6 +216,27 @@ export default function SubmitPage() {
                 />
                 <p className="text-xs text-charcoal/50 mt-1">We'll only use this to contact winners</p>
               </div>
+            </div>
+            <div className="mt-6">
+              <label className="label-text">Postal Code *</label>
+              <input
+                type="text"
+                required
+                value={formData.postalCode}
+                onChange={(e) => {
+                  // Format as user types: L0E1A0 -> L0E 1A0
+                  let value = e.target.value.toUpperCase().replace(/\s/g, '')
+                  if (value.length > 3) {
+                    value = value.slice(0, 3) + ' ' + value.slice(3, 6)
+                  }
+                  setFormData({...formData, postalCode: value})
+                }}
+                className="input-field max-w-xs"
+                placeholder="L0E 1A0"
+                pattern="[A-Z][0-9][A-Z] [0-9][A-Z][0-9]"
+                maxLength={7}
+              />
+              <p className="text-xs text-charcoal/50 mt-1">Georgina residents only</p>
             </div>
           </div>
 
@@ -358,7 +381,7 @@ export default function SubmitPage() {
                   className="w-5 h-5 rounded border-charcoal/20 text-pine-600 focus:ring-pine-500 mt-0.5"
                 />
                 <span className="text-charcoal/70">
-                  I confirm that I am a resident of Georgina or the surrounding areas. *
+                  I confirm that I am a resident of Georgina. *
                 </span>
               </label>
               <label className="flex items-start gap-3 cursor-pointer">

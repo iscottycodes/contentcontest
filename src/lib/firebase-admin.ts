@@ -35,6 +35,7 @@ export interface Submission {
   title: string
   author: string
   email: string
+  postalCode?: string
   type: 'photo' | 'writing' | 'video' | 'audio'
   description: string
   fileUrl?: string

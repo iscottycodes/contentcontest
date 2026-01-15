@@ -16,19 +16,49 @@ export default function ContactPage() {
     email: '',
     subject: 'general',
     message: '',
+    website: '', // Honeypot field - bots will fill this
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
+    
+    // Honeypot check - if this field is filled, it's likely a bot
+    if (formData.website) {
+      setError('Spam detected. Please try again.')
+      return
+    }
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address.')
+      return
+    }
+    
     setIsSubmitting(true)
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setIsSubmitting(false)
-    setSubmitted(true)
+    
+    try {
+      // TODO: Implement email verification handshake
+      // 1. Send verification email to user
+      // 2. User clicks verification link
+      // 3. Then process the actual contact form submission
+      
+      // For now, simulate submission
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      setSubmitted(true)
+    } catch (err) {
+      setError('Failed to send message. Please try again or email us directly.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (submitted) {
+    const submittedEmail = formData.email // Store email before form reset
     return (
       <div className="pt-32 pb-20 min-h-screen flex items-center justify-center">
         <motion.div
@@ -39,9 +69,12 @@ export default function ContactPage() {
           <div className="w-20 h-20 rounded-full bg-pine-100 flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-10 h-10 text-pine-600" />
           </div>
-          <h1 className="text-2xl font-bold text-charcoal mb-4">Message Sent!</h1>
-          <p className="text-charcoal/60">
-            Thank you for reaching out. We'll get back to you as soon as possible.
+          <h1 className="text-2xl font-bold text-charcoal mb-4">Verification Email Sent!</h1>
+          <p className="text-charcoal/60 mb-4">
+            We've sent a verification email to <strong>{submittedEmail}</strong>. Please check your inbox and click the verification link to confirm your message.
+          </p>
+          <p className="text-sm text-charcoal/50">
+            This helps us prevent spam and ensures we can respond to legitimate inquiries.
           </p>
         </motion.div>
       </div>
@@ -127,6 +160,16 @@ export default function ContactPage() {
           <div className="lg:col-span-3">
             <div className="card p-8">
               <h2 className="text-xl font-bold text-charcoal mb-6">Send a Message</h2>
+              <p className="text-sm text-charcoal/60 mb-6">
+                To prevent spam, we'll send a verification email to confirm your address before your message is delivered.
+              </p>
+              
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+              
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
@@ -185,6 +228,20 @@ export default function ContactPage() {
                     onChange={(e) => setFormData({...formData, message: e.target.value})}
                     className="input-field resize-none"
                     placeholder="How can we help you?"
+                  />
+                </div>
+
+                {/* Honeypot field - hidden from users but visible to bots */}
+                <div className="hidden" aria-hidden="true">
+                  <label htmlFor="website">Website (leave blank)</label>
+                  <input
+                    type="text"
+                    id="website"
+                    name="website"
+                    value={formData.website}
+                    onChange={(e) => setFormData({...formData, website: e.target.value})}
+                    tabIndex={-1}
+                    autoComplete="off"
                   />
                 </div>
 

@@ -136,15 +136,15 @@ export default function Home() {
               {
                 step: '01',
                 icon: Sparkles,
-                title: 'Create Your Content',
-                description: 'Photography, art, writing, video—share your creative talents with the Georgina community.',
+                title: 'Thursday Theme Announced',
+                description: 'Every Thursday, we announce the weekly theme. Get inspired and start creating!',
                 color: 'pine'
               },
               {
                 step: '02',
                 icon: Clock,
-                title: 'Submit Thu–Sun',
-                description: 'Upload your entry through our submission form or email us. Contest opens every Thursday at midnight.',
+                title: 'Upload Thu–Sun',
+                description: 'Submit your entry Thursday through Sunday. Upload through our form or email us directly.',
                 color: 'lake'
               },
               {
