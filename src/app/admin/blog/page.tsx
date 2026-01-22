@@ -14,10 +14,12 @@ function formatDate(timestamp: Timestamp | undefined): string {
 export default function BlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null)
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchPosts() {
@@ -47,6 +49,11 @@ export default function BlogPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setError(null)
+    setSaving(true)
+    
+    console.log('Form submitted!')
+    
     const form = e.currentTarget
     const formData = new FormData(form)
     
@@ -56,8 +63,11 @@ export default function BlogPage() {
     const content = formData.get('content') as string
     const excerpt = formData.get('excerpt') as string || ''
     
+    console.log('Form data:', { title, type, status, content: content.substring(0, 50) + '...' })
+    
     if (!title || !type || !status || !content) {
-      alert('Please fill in all required fields')
+      setError('Please fill in all required fields')
+      setSaving(false)
       return
     }
 
@@ -68,7 +78,10 @@ export default function BlogPage() {
       .replace(/(^-|-$)/g, '')
 
     try {
+      console.log('Saving blog post...')
+      
       if (editingPost?.id) {
+        console.log('Updating existing post:', editingPost.id)
         // Update existing post
         await updateBlogPost(editingPost.id, {
           title,
@@ -80,6 +93,7 @@ export default function BlogPage() {
           publishedAt: status === 'published' ? Timestamp.now() : editingPost.publishedAt,
         })
       } else {
+        console.log('Creating new post')
         // Create new post
         await addBlogPost({
           title,
@@ -93,6 +107,8 @@ export default function BlogPage() {
         })
       }
 
+      console.log('Post saved successfully! Refreshing list...')
+      
       // Refresh posts list
       const data = await getBlogPosts()
       setPosts(data)
@@ -100,9 +116,14 @@ export default function BlogPage() {
       // Close editor
       setShowEditor(false)
       setEditingPost(null)
-    } catch (error) {
+      setError(null)
+    } catch (error: any) {
       console.error('Error saving blog post:', error)
-      alert('Failed to save blog post. Please check console for details.')
+      const errorMessage = error?.message || 'Failed to save blog post. Please check console for details.'
+      setError(errorMessage)
+      alert(`Error: ${errorMessage}\n\nCheck browser console (F12) for more details.`)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -268,6 +289,12 @@ export default function BlogPage() {
               {editingPost ? 'Edit Post' : 'New Blog Post'}
             </h2>
             <form className="space-y-6" onSubmit={handleSubmit}>
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+                  <strong>Error:</strong> {error}
+                </div>
+              )}
+              
               <div>
                 <label className="label-text">Title *</label>
                 <input 
@@ -277,13 +304,14 @@ export default function BlogPage() {
                   placeholder="Enter post title..."
                   defaultValue={editingPost?.title || ''}
                   required 
+                  disabled={saving}
                 />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label-text">Blog Type *</label>
-                  <select name="type" className="input-field" defaultValue={editingPost?.type || ''} required>
+                  <select name="type" className="input-field" defaultValue={editingPost?.type || ''} required disabled={saving}>
                     <option value="">Select type</option>
                     <option value="contest">Contest Gallery</option>
                     <option value="personal">From the Editor</option>
@@ -291,7 +319,7 @@ export default function BlogPage() {
                 </div>
                 <div>
                   <label className="label-text">Status *</label>
-                  <select name="status" className="input-field" defaultValue={editingPost?.status || 'draft'} required>
+                  <select name="status" className="input-field" defaultValue={editingPost?.status || 'draft'} required disabled={saving}>
                     <option value="draft">Draft</option>
                     <option value="published">Published</option>
                   </select>
@@ -314,6 +342,7 @@ export default function BlogPage() {
                   placeholder="Write your post content here... (Markdown supported)"
                   defaultValue={editingPost?.content || ''}
                   required
+                  disabled={saving}
                 />
               </div>
 
@@ -325,6 +354,7 @@ export default function BlogPage() {
                   className="input-field resize-none"
                   placeholder="Brief summary for previews..."
                   defaultValue={editingPost?.excerpt || ''}
+                  disabled={saving}
                 />
               </div>
 
@@ -334,40 +364,58 @@ export default function BlogPage() {
                   onClick={() => {
                     setShowEditor(false)
                     setEditingPost(null)
+                    setError(null)
                   }}
                   className="btn-secondary flex-1"
+                  disabled={saving}
                 >
                   Cancel
                 </button>
                 <button 
-                  type="submit" 
-                  name="action"
-                  value="draft"
-                  className="btn-secondary flex-1"
+                  type="button"
+                  className="btn-secondary flex-1 flex items-center justify-center gap-2"
+                  disabled={saving}
                   onClick={(e) => {
+                    e.preventDefault()
                     const form = e.currentTarget.closest('form')
                     if (form) {
                       const statusSelect = form.querySelector('[name="status"]') as HTMLSelectElement
                       if (statusSelect) statusSelect.value = 'draft'
+                      form.requestSubmit()
                     }
                   }}
                 >
-                  Save Draft
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Draft'
+                  )}
                 </button>
                 <button 
-                  type="submit" 
-                  name="action"
-                  value="publish"
-                  className="btn-primary flex-1"
+                  type="button"
+                  className="btn-primary flex-1 flex items-center justify-center gap-2"
+                  disabled={saving}
                   onClick={(e) => {
+                    e.preventDefault()
                     const form = e.currentTarget.closest('form')
                     if (form) {
                       const statusSelect = form.querySelector('[name="status"]') as HTMLSelectElement
                       if (statusSelect) statusSelect.value = 'published'
+                      form.requestSubmit()
                     }
                   }}
                 >
-                  Publish
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Publishing...
+                    </>
+                  ) : (
+                    'Publish'
+                  )}
                 </button>
               </div>
             </form>
