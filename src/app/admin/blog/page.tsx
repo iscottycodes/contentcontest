@@ -79,11 +79,16 @@ export default function BlogPage() {
 
     try {
       console.log('Saving blog post...')
+      console.log('Post data:', { title, type, status, contentLength: content.length })
+      
+      // Check if user is authenticated
+      const { useAuth } = await import('@/lib/auth-context')
+      // Note: We can't use hooks here, but Firestore rules will check auth
       
       if (editingPost?.id) {
         console.log('Updating existing post:', editingPost.id)
         // Update existing post
-        await updateBlogPost(editingPost.id, {
+        const result = await updateBlogPost(editingPost.id, {
           title,
           slug,
           content,
@@ -92,10 +97,11 @@ export default function BlogPage() {
           status,
           publishedAt: status === 'published' ? Timestamp.now() : editingPost.publishedAt,
         })
+        console.log('Update result:', result)
       } else {
         console.log('Creating new post')
         // Create new post
-        await addBlogPost({
+        const result = await addBlogPost({
           title,
           slug,
           content,
@@ -105,23 +111,41 @@ export default function BlogPage() {
           author: 'Admin', // You can get this from auth context
           publishedAt: status === 'published' ? Timestamp.now() : undefined,
         })
+        console.log('Add result:', result)
+        console.log('Post ID:', result.id)
       }
 
       console.log('Post saved successfully! Refreshing list...')
       
       // Refresh posts list
       const data = await getBlogPosts()
+      console.log('Refreshed posts:', data.length, 'posts found')
       setPosts(data)
       
       // Close editor
       setShowEditor(false)
       setEditingPost(null)
       setError(null)
+      
+      alert('Blog post saved successfully!')
     } catch (error: any) {
       console.error('Error saving blog post:', error)
-      const errorMessage = error?.message || 'Failed to save blog post. Please check console for details.'
+      console.error('Error code:', error?.code)
+      console.error('Error message:', error?.message)
+      console.error('Full error:', error)
+      
+      let errorMessage = 'Failed to save blog post.'
+      
+      if (error?.code === 'permission-denied') {
+        errorMessage = 'Permission denied. Make sure you are logged in and Firestore rules allow writes.'
+      } else if (error?.code === 'unavailable') {
+        errorMessage = 'Firebase is unavailable. Check your internet connection and Firebase configuration.'
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+      
       setError(errorMessage)
-      alert(`Error: ${errorMessage}\n\nCheck browser console (F12) for more details.`)
+      alert(`Error: ${errorMessage}\n\nError Code: ${error?.code || 'unknown'}\n\nCheck browser console (F12) for more details.`)
     } finally {
       setSaving(false)
     }
