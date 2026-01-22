@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { FileText, Plus, Search, Edit2, Trash2, Eye, Calendar, Tag, ExternalLink, Loader2 } from 'lucide-react'
-import { getBlogPosts, type BlogPost } from '@/lib/firebase-admin'
+import { getBlogPosts, addBlogPost, updateBlogPost, type BlogPost } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase/firestore'
 
 function formatDate(timestamp: Timestamp | undefined): string {
@@ -43,6 +43,67 @@ export default function BlogPage() {
   const openEditor = (post?: BlogPost) => {
     setEditingPost(post || null)
     setShowEditor(true)
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = e.currentTarget
+    const formData = new FormData(form)
+    
+    const title = formData.get('title') as string
+    const type = formData.get('type') as 'contest' | 'personal'
+    const status = formData.get('status') as 'draft' | 'published'
+    const content = formData.get('content') as string
+    const excerpt = formData.get('excerpt') as string || ''
+    
+    if (!title || !type || !status || !content) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    // Generate slug from title
+    const slug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+
+    try {
+      if (editingPost?.id) {
+        // Update existing post
+        await updateBlogPost(editingPost.id, {
+          title,
+          slug,
+          content,
+          excerpt,
+          type,
+          status,
+          publishedAt: status === 'published' ? Timestamp.now() : editingPost.publishedAt,
+        })
+      } else {
+        // Create new post
+        await addBlogPost({
+          title,
+          slug,
+          content,
+          excerpt,
+          type,
+          status,
+          author: 'Admin', // You can get this from auth context
+          publishedAt: status === 'published' ? Timestamp.now() : undefined,
+        })
+      }
+
+      // Refresh posts list
+      const data = await getBlogPosts()
+      setPosts(data)
+      
+      // Close editor
+      setShowEditor(false)
+      setEditingPost(null)
+    } catch (error) {
+      console.error('Error saving blog post:', error)
+      alert('Failed to save blog post. Please check console for details.')
+    }
   }
 
   return (
@@ -206,11 +267,12 @@ export default function BlogPage() {
             <h2 className="text-xl font-bold text-charcoal mb-6">
               {editingPost ? 'Edit Post' : 'New Blog Post'}
             </h2>
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
                 <label className="label-text">Title *</label>
                 <input 
                   type="text" 
+                  name="title"
                   className="input-field text-lg font-semibold" 
                   placeholder="Enter post title..."
                   defaultValue={editingPost?.title || ''}
@@ -221,7 +283,7 @@ export default function BlogPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label-text">Blog Type *</label>
-                  <select className="input-field" defaultValue={editingPost?.type} required>
+                  <select name="type" className="input-field" defaultValue={editingPost?.type || ''} required>
                     <option value="">Select type</option>
                     <option value="contest">Contest Gallery</option>
                     <option value="personal">From the Editor</option>
@@ -229,7 +291,7 @@ export default function BlogPage() {
                 </div>
                 <div>
                   <label className="label-text">Status *</label>
-                  <select className="input-field" defaultValue={editingPost?.status} required>
+                  <select name="status" className="input-field" defaultValue={editingPost?.status || 'draft'} required>
                     <option value="draft">Draft</option>
                     <option value="published">Published</option>
                   </select>
@@ -239,16 +301,18 @@ export default function BlogPage() {
               <div>
                 <label className="label-text">Featured Image</label>
                 <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-pine-400 transition-colors">
-                  <p className="text-sm text-charcoal/50">Click to upload featured image</p>
+                  <p className="text-sm text-charcoal/50">Click to upload featured image (coming soon)</p>
                 </div>
               </div>
 
               <div>
                 <label className="label-text">Content *</label>
                 <textarea
+                  name="content"
                   rows={12}
                   className="input-field resize-none font-mono text-sm"
                   placeholder="Write your post content here... (Markdown supported)"
+                  defaultValue={editingPost?.content || ''}
                   required
                 />
               </div>
@@ -256,24 +320,53 @@ export default function BlogPage() {
               <div>
                 <label className="label-text">Excerpt</label>
                 <textarea
+                  name="excerpt"
                   rows={3}
                   className="input-field resize-none"
                   placeholder="Brief summary for previews..."
+                  defaultValue={editingPost?.excerpt || ''}
                 />
               </div>
 
               <div className="flex gap-4 pt-4 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setShowEditor(false)}
+                  onClick={() => {
+                    setShowEditor(false)
+                    setEditingPost(null)
+                  }}
                   className="btn-secondary flex-1"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-secondary flex-1">
+                <button 
+                  type="submit" 
+                  name="action"
+                  value="draft"
+                  className="btn-secondary flex-1"
+                  onClick={(e) => {
+                    const form = e.currentTarget.closest('form')
+                    if (form) {
+                      const statusSelect = form.querySelector('[name="status"]') as HTMLSelectElement
+                      if (statusSelect) statusSelect.value = 'draft'
+                    }
+                  }}
+                >
                   Save Draft
                 </button>
-                <button type="submit" className="btn-primary flex-1">
+                <button 
+                  type="submit" 
+                  name="action"
+                  value="publish"
+                  className="btn-primary flex-1"
+                  onClick={(e) => {
+                    const form = e.currentTarget.closest('form')
+                    if (form) {
+                      const statusSelect = form.querySelector('[name="status"]') as HTMLSelectElement
+                      if (statusSelect) statusSelect.value = 'published'
+                    }
+                  }}
+                >
                   Publish
                 </button>
               </div>
