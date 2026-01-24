@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { FileText, Plus, Search, Edit2, Trash2, Eye, Calendar, Tag, ExternalLink, Loader2 } from 'lucide-react'
 import { getBlogPosts, addBlogPost, updateBlogPost, type BlogPost } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase/firestore'
+import { useAuth } from '@/lib/auth-context'
 
 function formatDate(timestamp: Timestamp | undefined): string {
   if (!timestamp) return 'N/A'
@@ -20,6 +21,7 @@ export default function BlogPage() {
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
 
   useEffect(() => {
     async function fetchPosts() {
@@ -77,41 +79,53 @@ export default function BlogPage() {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
 
+    // Check authentication first
+    if (!user) {
+      setError('You must be logged in to create blog posts. Please refresh and log in again.')
+      setSaving(false)
+      alert('You must be logged in to create blog posts. Please log in again.')
+      return
+    }
+
+    console.log('User authenticated:', user.email)
+
     try {
       console.log('Saving blog post...')
       console.log('Post data:', { title, type, status, contentLength: content.length })
       
-      // Check if user is authenticated
-      const { useAuth } = await import('@/lib/auth-context')
-      // Note: We can't use hooks here, but Firestore rules will check auth
+      // Add timeout wrapper
+      const savePromise = editingPost?.id
+        ? updateBlogPost(editingPost.id, {
+            title,
+            slug,
+            content,
+            excerpt,
+            type,
+            status,
+            publishedAt: status === 'published' ? Timestamp.now() : editingPost.publishedAt,
+          })
+        : addBlogPost({
+            title,
+            slug,
+            content,
+            excerpt,
+            type,
+            status,
+            author: user.email || 'Admin',
+            publishedAt: status === 'published' ? Timestamp.now() : undefined,
+          })
+
+      // Add timeout (30 seconds)
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out after 30 seconds')), 30000)
+      })
+
+      console.log(editingPost?.id ? 'Updating existing post:' : 'Creating new post', editingPost?.id || 'new')
       
-      if (editingPost?.id) {
-        console.log('Updating existing post:', editingPost.id)
-        // Update existing post
-        const result = await updateBlogPost(editingPost.id, {
-          title,
-          slug,
-          content,
-          excerpt,
-          type,
-          status,
-          publishedAt: status === 'published' ? Timestamp.now() : editingPost.publishedAt,
-        })
-        console.log('Update result:', result)
-      } else {
-        console.log('Creating new post')
-        // Create new post
-        const result = await addBlogPost({
-          title,
-          slug,
-          content,
-          excerpt,
-          type,
-          status,
-          author: 'Admin', // You can get this from auth context
-          publishedAt: status === 'published' ? Timestamp.now() : undefined,
-        })
-        console.log('Add result:', result)
+      const result = await Promise.race([savePromise, timeoutPromise])
+      console.log('Save result:', result)
+      
+      if (result && 'id' in result) {
         console.log('Post ID:', result.id)
       }
 
@@ -132,14 +146,17 @@ export default function BlogPage() {
       console.error('Error saving blog post:', error)
       console.error('Error code:', error?.code)
       console.error('Error message:', error?.message)
+      console.error('Error stack:', error?.stack)
       console.error('Full error:', error)
       
       let errorMessage = 'Failed to save blog post.'
       
       if (error?.code === 'permission-denied') {
-        errorMessage = 'Permission denied. Make sure you are logged in and Firestore rules allow writes.'
+        errorMessage = 'Permission denied. Make sure you are logged in and Firestore rules allow writes. Check Firestore rules in Firebase Console.'
       } else if (error?.code === 'unavailable') {
         errorMessage = 'Firebase is unavailable. Check your internet connection and Firebase configuration.'
+      } else if (error?.message?.includes('timeout')) {
+        errorMessage = 'Request timed out. Check your internet connection and Firebase configuration. The database might not be created yet.'
       } else if (error?.message) {
         errorMessage = error.message
       }
