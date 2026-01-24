@@ -16,7 +16,8 @@ import {
   Bell,
   ChevronDown,
   Heart,
-  Calendar
+  Calendar,
+  Database
 } from 'lucide-react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { useAuth } from '@/lib/auth-context'
