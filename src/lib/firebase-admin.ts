@@ -150,12 +150,25 @@ export async function getSubmissions(statusFilter?: string) {
 
 export async function addSubmission(data: Omit<Submission, 'id' | 'createdAt' | 'updatedAt'>) {
   const database = checkFirebase()
+  console.log('addSubmission: Attempting to write to submissions collection')
+  
   const submissionsRef = collection(database, COLLECTIONS.SUBMISSIONS)
-  return addDoc(submissionsRef, {
+  const docData = {
     ...data,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  })
+  }
+  
+  try {
+    const result = await addDoc(submissionsRef, docData)
+    console.log('addSubmission: Write successful, document ID:', result.id)
+    return result
+  } catch (error: any) {
+    console.error('addSubmission: Firestore error:', error)
+    console.error('addSubmission: Error code:', error?.code)
+    console.error('addSubmission: Error message:', error?.message)
+    throw error
+  }
 }
 
 export async function updateSubmission(id: string, data: Partial<Submission>) {
