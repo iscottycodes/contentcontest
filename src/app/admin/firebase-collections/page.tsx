@@ -77,95 +77,130 @@ export default function FirebaseCollectionsPage() {
       return
     }
 
+    console.log('Creating collection:', collectionName)
     setCreating(collectionName)
     const newCreated = new Set(created)
     newCreated.delete(collectionName) // Remove from created if was there
     setCreated(newCreated)
 
     try {
-      switch (collectionName) {
-        case 'blog_posts':
-          await addBlogPost({
-            title: 'Sample Blog Post',
-            slug: 'sample-blog-post',
-            content: 'This is a sample blog post created to initialize the collection.',
-            excerpt: 'Sample excerpt',
-            type: 'contest',
-            status: 'draft',
-            author: user.email || 'Admin',
-          })
-          break
+      // Add timeout wrapper
+      const createPromise = (async () => {
+        switch (collectionName) {
+          case 'blog_posts':
+            console.log('Creating blog_posts collection...')
+            await addBlogPost({
+              title: 'Sample Blog Post',
+              slug: 'sample-blog-post',
+              content: 'This is a sample blog post created to initialize the collection.',
+              excerpt: 'Sample excerpt',
+              type: 'contest',
+              status: 'draft',
+              author: user.email || 'Admin',
+            })
+            break
 
-        case 'submissions':
-          await addSubmission({
-            title: 'Sample Submission',
-            author: 'Sample Author',
-            email: 'sample@example.com',
-            type: 'photo',
-            description: 'This is a sample submission created to initialize the collection.',
-            status: 'pending',
-            week: getCurrentWeek(),
-          })
-          break
+          case 'submissions':
+            console.log('Creating submissions collection...')
+            await addSubmission({
+              title: 'Sample Submission',
+              author: 'Sample Author',
+              email: 'sample@example.com',
+              type: 'photo',
+              description: 'This is a sample submission created to initialize the collection.',
+              status: 'pending',
+              week: getCurrentWeek(),
+            })
+            break
 
-        case 'sponsors':
-          await addSponsor({
-            name: 'Sample Sponsor',
-            tier: 'bronze',
-            contact: 'Sample Contact',
-            email: 'sponsor@example.com',
-            status: 'inactive',
-            startDate: Timestamp.now(),
-          })
-          break
+          case 'sponsors':
+            console.log('Creating sponsors collection...')
+            await addSponsor({
+              name: 'Sample Sponsor',
+              tier: 'bronze',
+              contact: 'Sample Contact',
+              email: 'sponsor@example.com',
+              status: 'inactive',
+              startDate: Timestamp.now(),
+            })
+            break
 
-        case 'volunteers':
-          await addVolunteer({
-            firstName: 'Sample',
-            lastName: 'Volunteer',
-            email: 'volunteer@example.com',
-            phone: '123-456-7890',
-            city: 'Sample City',
-            age: '25-35',
-            interests: ['sample'],
-            availability: ['weekends'],
-            commitmentLevel: 'moderate',
-            motivation: 'Sample motivation text',
-          })
-          break
+          case 'volunteers':
+            console.log('Creating volunteers collection...')
+            await addVolunteer({
+              firstName: 'Sample',
+              lastName: 'Volunteer',
+              email: 'volunteer@example.com',
+              phone: '123-456-7890',
+              city: 'Sample City',
+              age: '25-35',
+              interests: ['sample'],
+              availability: ['weekends'],
+              commitmentLevel: 'moderate',
+              motivation: 'Sample motivation text',
+            })
+            break
 
-        case 'contests':
-          await addContest({
-            title: 'Sample Contest',
-            description: 'This is a sample contest created to initialize the collection.',
-            week: getCurrentWeek(),
-            status: 'draft',
-            openDate: Timestamp.now(),
-            closeDate: Timestamp.now(),
-          })
-          break
+          case 'contests':
+            console.log('Creating contests collection...')
+            await addContest({
+              title: 'Sample Contest',
+              description: 'This is a sample contest created to initialize the collection.',
+              week: getCurrentWeek(),
+              status: 'draft',
+              openDate: Timestamp.now(),
+              closeDate: Timestamp.now(),
+            })
+            break
 
-        case 'settings':
-          // Settings collection - create a simple document
-          const { doc, setDoc } = await import('firebase/firestore')
-          const { db } = await import('@/lib/firebase')
-          if (!db) throw new Error('Firebase not configured')
-          const settingsRef = doc(db, 'settings', 'site')
-          await setDoc(settingsRef, {
-            siteName: 'ContentContest',
-            createdAt: Timestamp.now(),
-          })
-          break
+          case 'settings':
+            console.log('Creating settings collection...')
+            // Settings collection - create a simple document
+            const { doc, setDoc } = await import('firebase/firestore')
+            const { db } = await import('@/lib/firebase')
+            if (!db) throw new Error('Firebase not configured')
+            const settingsRef = doc(db, 'settings', 'site')
+            await setDoc(settingsRef, {
+              siteName: 'ContentContest',
+              createdAt: Timestamp.now(),
+            })
+            break
 
-        default:
-          throw new Error(`Unknown collection: ${collectionName}`)
-      }
+          default:
+            throw new Error(`Unknown collection: ${collectionName}`)
+        }
+        
+        console.log(`Collection ${collectionName} created successfully!`)
+      })()
+
+      // Add timeout (30 seconds)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out after 30 seconds. Check if Firebase is configured and you are logged in.')), 30000)
+      })
+
+      await Promise.race([createPromise, timeoutPromise])
 
       setCreated(new Set(created).add(collectionName))
       alert(`✅ Collection "${collectionName}" created successfully! A sample document has been added.`)
     } catch (error: any) {
       console.error(`Error creating ${collectionName}:`, error)
-      alert(`❌ Failed to create collection: ${error.message}\n\nCheck browser console for details.`)
+      console.error('Error code:', error?.code)
+      console.error('Error message:', error?.message)
+      console.error('Full error:', error)
+      
+      let errorMessage = `Failed to create collection: ${error.message}`
+      
+      if (error?.code === 'permission-denied') {
+        errorMessage = 'Permission denied. Make sure you are logged in and Firestore rules allow writes.'
+      } else if (error?.code === 'unavailable') {
+        errorMessage = 'Firebase is unavailable. Check your internet connection and Firebase configuration.'
+      } else if (error?.message?.includes('timeout')) {
+        errorMessage = 'Request timed out. Check if Firebase database is created and environment variables are set.'
+      } else if (error?.message?.includes('not configured')) {
+        errorMessage = 'Firebase is not configured. Add environment variables to Vercel.'
+      }
+      
+      alert(`❌ ${errorMessage}\n\nCheck browser console (F12) for more details.`)
     } finally {
       setCreating(null)
     }
