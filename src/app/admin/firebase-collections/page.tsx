@@ -78,7 +78,9 @@ export default function FirebaseCollectionsPage() {
     }
 
     setCreating(collectionName)
-    setCreated(new Set(created).delete(collectionName)) // Remove from created if was there
+    const newCreated = new Set(created)
+    newCreated.delete(collectionName) // Remove from created if was there
+    setCreated(newCreated)
 
     try {
       switch (collectionName) {
