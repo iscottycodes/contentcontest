@@ -204,11 +204,19 @@ export async function getActiveSponsors() {
 
 export async function addSponsor(data: Omit<Sponsor, 'id' | 'createdAt'>) {
   const database = checkFirebase()
+  console.log('addSponsor: Attempting write')
   const sponsorsRef = collection(database, COLLECTIONS.SPONSORS)
-  return addDoc(sponsorsRef, {
-    ...data,
-    createdAt: serverTimestamp(),
-  })
+  try {
+    const result = await addDoc(sponsorsRef, {
+      ...data,
+      createdAt: serverTimestamp(),
+    })
+    console.log('addSponsor: Write successful')
+    return result
+  } catch (error: any) {
+    console.error('addSponsor: Error:', error?.code, error?.message)
+    throw error
+  }
 }
 
 export async function updateSponsor(id: string, data: Partial<Sponsor>) {
@@ -239,13 +247,21 @@ export async function getVolunteers(statusFilter?: string) {
 
 export async function addVolunteer(data: Omit<Volunteer, 'id' | 'createdAt' | 'updatedAt' | 'status'>) {
   const database = checkFirebase()
+  console.log('addVolunteer: Attempting write')
   const volunteersRef = collection(database, COLLECTIONS.VOLUNTEERS)
-  return addDoc(volunteersRef, {
-    ...data,
-    status: 'new',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
+  try {
+    const result = await addDoc(volunteersRef, {
+      ...data,
+      status: 'new',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    console.log('addVolunteer: Write successful')
+    return result
+  } catch (error: any) {
+    console.error('addVolunteer: Error:', error?.code, error?.message)
+    throw error
+  }
 }
 
 export async function updateVolunteer(id: string, data: Partial<Volunteer>) {
@@ -357,12 +373,20 @@ export async function getActiveContest() {
 
 export async function addContest(data: Omit<Contest, 'id' | 'createdAt' | 'updatedAt'>) {
   const database = checkFirebase()
+  console.log('addContest: Attempting write')
   const contestsRef = collection(database, COLLECTIONS.CONTESTS)
-  return addDoc(contestsRef, {
-    ...data,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
+  try {
+    const result = await addDoc(contestsRef, {
+      ...data,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    console.log('addContest: Write successful')
+    return result
+  } catch (error: any) {
+    console.error('addContest: Error:', error?.code, error?.message)
+    throw error
+  }
 }
 
 export async function updateContest(id: string, data: Partial<Contest>) {
