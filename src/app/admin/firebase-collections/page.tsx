@@ -84,12 +84,33 @@ export default function FirebaseCollectionsPage() {
     setCreated(newCreated)
 
     try {
+      // Check Firebase is configured first
+      const { db } = await import('@/lib/firebase')
+      if (!db) {
+        throw new Error('Firebase is not configured. Please add environment variables to Vercel.')
+      }
+      console.log('Firebase database connection verified')
+
+      // Check authentication
+      const { auth } = await import('@/lib/firebase')
+      if (!auth) {
+        throw new Error('Firebase Auth is not configured.')
+      }
+      console.log('Firebase auth connection verified')
+      console.log('Current user:', user?.email || 'Not logged in')
+
       // Add timeout wrapper
       const createPromise = (async () => {
         switch (collectionName) {
           case 'blog_posts':
             console.log('Creating blog_posts collection...')
-            await addBlogPost({
+            console.log('Calling addBlogPost with data:', {
+              title: 'Sample Blog Post',
+              type: 'contest',
+              status: 'draft',
+              author: user.email || 'Admin',
+            })
+            const blogResult = await addBlogPost({
               title: 'Sample Blog Post',
               slug: 'sample-blog-post',
               content: 'This is a sample blog post created to initialize the collection.',
@@ -98,7 +119,8 @@ export default function FirebaseCollectionsPage() {
               status: 'draft',
               author: user.email || 'Admin',
             })
-            break
+            console.log('addBlogPost returned:', blogResult)
+            return blogResult
 
           case 'submissions':
             console.log('Creating submissions collection...')
@@ -173,12 +195,14 @@ export default function FirebaseCollectionsPage() {
         console.log(`Collection ${collectionName} created successfully!`)
       })()
 
-      // Add timeout (30 seconds)
+      // Add timeout (15 seconds - shorter to fail faster)
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out after 30 seconds. Check if Firebase is configured and you are logged in.')), 30000)
+        setTimeout(() => reject(new Error('Request timed out after 15 seconds. This usually means:\n1. Firestore database is not created\n2. Security rules are blocking writes\n3. You are not logged in\n\nCheck browser console and Firebase Console.')), 15000)
       })
 
-      await Promise.race([createPromise, timeoutPromise])
+      console.log('Starting Promise.race with timeout...')
+      const result = await Promise.race([createPromise, timeoutPromise])
+      console.log('Promise.race completed with result:', result)
 
       setCreated(new Set(created).add(collectionName))
       alert(`✅ Collection "${collectionName}" created successfully! A sample document has been added.`)
@@ -189,18 +213,23 @@ export default function FirebaseCollectionsPage() {
       console.error('Full error:', error)
       
       let errorMessage = `Failed to create collection: ${error.message}`
+      let detailedHelp = ''
       
       if (error?.code === 'permission-denied') {
-        errorMessage = 'Permission denied. Make sure you are logged in and Firestore rules allow writes.'
+        errorMessage = 'Permission denied. Firestore rules are blocking writes.'
+        detailedHelp = '\n\nFix:\n1. Go to Firebase Console → Firestore → Rules\n2. Make sure rules allow: allow write: if request.auth != null\n3. Click "Publish"'
       } else if (error?.code === 'unavailable') {
-        errorMessage = 'Firebase is unavailable. Check your internet connection and Firebase configuration.'
+        errorMessage = 'Firebase is unavailable. Check your internet connection.'
+        detailedHelp = '\n\nCheck:\n1. Internet connection\n2. Firebase project is active\n3. Environment variables are set'
       } else if (error?.message?.includes('timeout')) {
-        errorMessage = 'Request timed out. Check if Firebase database is created and environment variables are set.'
+        errorMessage = 'Request timed out. This usually means the database is not set up correctly.'
+        detailedHelp = '\n\nCheck:\n1. Firestore database is created (not just "Get started")\n2. You are logged in (check top right of admin panel)\n3. Firestore rules are published\n4. Environment variables are set in Vercel\n\nGo to: https://console.firebase.google.com/project/content-contest-e86c7/firestore'
       } else if (error?.message?.includes('not configured')) {
-        errorMessage = 'Firebase is not configured. Add environment variables to Vercel.'
+        errorMessage = 'Firebase is not configured.'
+        detailedHelp = '\n\nFix:\n1. Add environment variables to Vercel\n2. Redeploy your site\n3. See DO_THIS_NOW.md for instructions'
       }
       
-      alert(`❌ ${errorMessage}\n\nCheck browser console (F12) for more details.`)
+      alert(`❌ ${errorMessage}${detailedHelp}\n\nCheck browser console (F12) for more details.`)
     } finally {
       setCreating(null)
     }
