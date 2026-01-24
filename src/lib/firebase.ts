@@ -24,7 +24,9 @@ let storage: FirebaseStorage | null = null
 
 if (isFirebaseConfigured) {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
-  db = getFirestore(app)
+  // Connect to the 'contentcontest' database if it exists, otherwise use default
+  // You can change 'contentcontest' to '(default)' if you want to use the default database
+  db = getFirestore(app, 'contentcontest')
   auth = getAuth(app)
   storage = getStorage(app)
 }
