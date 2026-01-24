@@ -30,6 +30,7 @@ const sidebarLinks = [
   { href: '/admin/volunteers', label: 'Volunteer Applications', icon: Heart },
   { href: '/admin/blog', label: 'Blog Posts', icon: FileText },
   { href: '/admin/firebase-collections', label: 'Firebase Collections', icon: Database },
+  { href: '/admin/test-firebase', label: 'Test Firebase', icon: Database },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
 
