@@ -32,13 +32,27 @@ export default function TestFirebasePage() {
 
       // Test 3: Try to write to Firestore
       console.log('Attempting to write to test collection...')
+      console.log('Database instance:', db ? 'exists' : 'null')
+      console.log('Database name:', (db as any)?._delegate?.databaseId?.databaseId || 'default')
+      
       const testRef = collection(db, 'test_collection')
-      const docRef = await addDoc(testRef, {
+      console.log('Collection reference created')
+      
+      const docData = {
         test: true,
         timestamp: serverTimestamp(),
         userEmail: user.email,
         createdAt: new Date().toISOString(),
+      }
+      console.log('Document data prepared, calling addDoc...')
+      
+      // Add a shorter timeout to fail faster and see the actual error
+      const writePromise = addDoc(testRef, docData)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Write timed out - check Firestore rules')), 10000)
       })
+      
+      const docRef = await Promise.race([writePromise, timeoutPromise])
       console.log('✅ Write successful! Document ID:', docRef.id)
 
       setResult({
