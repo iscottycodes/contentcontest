@@ -1,6 +1,17 @@
 'use client'
 
-import { Database, Plus, ExternalLink, FileText, Users, Building2, Heart, Calendar, Settings, Trophy } from 'lucide-react'
+import { useState } from 'react'
+import { Database, Plus, ExternalLink, FileText, Users, Building2, Heart, Calendar, Settings, Trophy, Loader2, CheckCircle2 } from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
+import { 
+  addBlogPost, 
+  addSubmission, 
+  addSponsor, 
+  addVolunteer, 
+  addContest,
+  getCurrentWeek 
+} from '@/lib/firebase-admin'
+import { Timestamp } from 'firebase/firestore'
 
 interface Collection {
   name: string
@@ -56,6 +67,107 @@ const collections: Collection[] = [
 ]
 
 export default function FirebaseCollectionsPage() {
+  const { user } = useAuth()
+  const [creating, setCreating] = useState<string | null>(null)
+  const [created, setCreated] = useState<Set<string>>(new Set())
+
+  const createCollection = async (collectionName: string) => {
+    if (!user) {
+      alert('You must be logged in to create collections')
+      return
+    }
+
+    setCreating(collectionName)
+    setCreated(new Set(created).delete(collectionName)) // Remove from created if was there
+
+    try {
+      switch (collectionName) {
+        case 'blog_posts':
+          await addBlogPost({
+            title: 'Sample Blog Post',
+            slug: 'sample-blog-post',
+            content: 'This is a sample blog post created to initialize the collection.',
+            excerpt: 'Sample excerpt',
+            type: 'contest',
+            status: 'draft',
+            author: user.email || 'Admin',
+          })
+          break
+
+        case 'submissions':
+          await addSubmission({
+            title: 'Sample Submission',
+            author: 'Sample Author',
+            email: 'sample@example.com',
+            type: 'photo',
+            description: 'This is a sample submission created to initialize the collection.',
+            status: 'pending',
+            week: getCurrentWeek(),
+          })
+          break
+
+        case 'sponsors':
+          await addSponsor({
+            name: 'Sample Sponsor',
+            tier: 'bronze',
+            contact: 'Sample Contact',
+            email: 'sponsor@example.com',
+            status: 'inactive',
+            startDate: Timestamp.now(),
+          })
+          break
+
+        case 'volunteers':
+          await addVolunteer({
+            firstName: 'Sample',
+            lastName: 'Volunteer',
+            email: 'volunteer@example.com',
+            phone: '123-456-7890',
+            city: 'Sample City',
+            age: '25-35',
+            interests: ['sample'],
+            availability: ['weekends'],
+            commitmentLevel: 'moderate',
+            motivation: 'Sample motivation text',
+          })
+          break
+
+        case 'contests':
+          await addContest({
+            title: 'Sample Contest',
+            description: 'This is a sample contest created to initialize the collection.',
+            week: getCurrentWeek(),
+            status: 'draft',
+            openDate: Timestamp.now(),
+            closeDate: Timestamp.now(),
+          })
+          break
+
+        case 'settings':
+          // Settings collection - create a simple document
+          const { doc, setDoc } = await import('firebase/firestore')
+          const { db } = await import('@/lib/firebase')
+          if (!db) throw new Error('Firebase not configured')
+          await setDoc(doc(db, 'settings', 'site'), {
+            siteName: 'ContentContest',
+            createdAt: Timestamp.now(),
+          })
+          break
+
+        default:
+          throw new Error(`Unknown collection: ${collectionName}`)
+      }
+
+      setCreated(new Set(created).add(collectionName))
+      alert(`✅ Collection "${collectionName}" created successfully! A sample document has been added.`)
+    } catch (error: any) {
+      console.error(`Error creating ${collectionName}:`, error)
+      alert(`❌ Failed to create collection: ${error.message}\n\nCheck browser console for details.`)
+    } finally {
+      setCreating(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -150,24 +262,42 @@ export default function FirebaseCollectionsPage() {
                       {collection.description}
                     </p>
                     <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => createCollection(collection.name)}
+                        disabled={creating === collection.name || creating !== null}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                          created.has(collection.name)
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            : creating === collection.name
+                            ? 'bg-slate-400 text-white cursor-not-allowed'
+                            : 'bg-pine-600 text-white hover:bg-pine-700'
+                        }`}
+                      >
+                        {creating === collection.name ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Creating...
+                          </>
+                        ) : created.has(collection.name) ? (
+                          <>
+                            <CheckCircle2 className="w-4 h-4" />
+                            Created
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4" />
+                            Create Collection
+                          </>
+                        )}
+                      </button>
                       <a
                         href={collection.dataLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-pine-600 text-white text-sm font-medium rounded-lg hover:bg-pine-700 transition-colors"
-                      >
-                        <Database className="w-4 h-4" />
-                        View Collection
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                      <a
-                        href={`https://console.firebase.google.com/project/content-contest-e86c7/firestore/data/~2F${collection.name}?add`}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-charcoal text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
                       >
-                        <Plus className="w-4 h-4" />
-                        Add Document
+                        <Database className="w-4 h-4" />
+                        View in Firebase
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
@@ -183,11 +313,11 @@ export default function FirebaseCollectionsPage() {
       <div className="card p-6 bg-blue-50 border border-blue-200">
         <h3 className="font-semibold text-blue-900 mb-2">💡 How Collections Work</h3>
         <ul className="text-sm text-blue-800 space-y-2 list-disc list-inside">
-          <li>Collections are created <strong>automatically</strong> when you first save data to them</li>
-          <li>You don't need to manually create collections - just use your app and they'll appear</li>
-          <li>Click "View Collection" to see existing documents</li>
-          <li>Click "Add Document" to manually create a test document</li>
-          <li>If a collection is empty, it means no data has been saved to it yet</li>
+          <li>Click <strong>"Create Collection"</strong> to automatically create the collection with a sample document</li>
+          <li>Collections are created automatically when you first save data to them</li>
+          <li>After creating, you can delete the sample document if you don't need it</li>
+          <li>Click "View in Firebase" to see the collection in Firebase Console</li>
+          <li>You must be logged in to create collections</li>
         </ul>
       </div>
 
