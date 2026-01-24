@@ -116,7 +116,7 @@ export default function BlogPage() {
           })
 
       // Add timeout (30 seconds)
-      const timeoutPromise = new Promise((_, reject) => {
+      const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Request timed out after 30 seconds')), 30000)
       })
 
@@ -125,8 +125,8 @@ export default function BlogPage() {
       const result = await Promise.race([savePromise, timeoutPromise])
       console.log('Save result:', result)
       
-      if (result && 'id' in result) {
-        console.log('Post ID:', result.id)
+      if (result && typeof result === 'object' && 'id' in result) {
+        console.log('Post ID:', (result as { id: string }).id)
       }
 
       console.log('Post saved successfully! Refreshing list...')
