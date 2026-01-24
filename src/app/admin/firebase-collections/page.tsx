@@ -145,7 +145,7 @@ export default function FirebaseCollectionsPage() {
 
         case 'settings':
           // Settings collection - create a simple document
-          const { doc, setDoc, collection: firestoreCollection } = await import('firebase/firestore')
+          const { doc, setDoc } = await import('firebase/firestore')
           const { db } = await import('@/lib/firebase')
           if (!db) throw new Error('Firebase not configured')
           const settingsRef = doc(db, 'settings', 'site')
